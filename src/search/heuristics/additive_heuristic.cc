@@ -17,7 +17,9 @@ const int AdditiveHeuristic::MAX_COST_VALUE;
 // construction and destruction
 AdditiveHeuristic::AdditiveHeuristic(const Options &opts)
     : RelaxationHeuristic(opts),
-      did_write_overflow_warning(false) {
+      did_write_overflow_warning(false),
+      enque_function(enque) {
+      //enque_function(&enqueue_if_necessary) {
     if (log.is_at_least_normal()) {
         log << "Initializing additive heuristic..." << endl;
     }
@@ -46,13 +48,25 @@ void AdditiveHeuristic::setup_exploration_queue() {
         prop.marked = false;
     }
 
-    // Deal with operators and axioms without preconditions.
-    for (UnaryOperator &op : unary_operators) {
+    // Deal with operators and axioms without preconditions_props.
+    for (UnaryOperator &op : inner_nodes) {
         op.unsatisfied_preconditions = op.num_preconditions;
-        op.cost = op.base_cost; // will be increased by precondition costs
-
+        op.cost = 0;
         if (op.unsatisfied_preconditions == 0)
-            enqueue_if_necessary(op.effect, op.base_cost, get_op_id(op));
+            op.update_precondition(enque_function, ((relaxation_heuristic::RelaxationHeuristic&) (*this)));
+    }
+
+    for (EffectNode &op : effect_nodes) {
+            op.unsatisfied_preconditions = op.num_preconditions;
+            op.cost = op.base_cost; // will be increased by precondition costs
+        }
+
+    for (relaxation_heuristic::InnerNode &op : inner_nodes) {
+        cout << &op << ": ";
+        for (auto &dep : op.precondition_of) {
+            cout << &dep <<", ";
+        }
+        cout <<"\n";
     }
 }
 
@@ -77,15 +91,17 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
+        vector<PropID > new_props;
         for (OpID op_id : precondition_of_pool.get_slice(
                  prop->precondition_of, prop->num_precondition_occurences)) {
-            UnaryOperator *unary_op = get_operator(op_id);
+            relaxation_heuristic::InnerNode *unary_op = (relaxation_heuristic::InnerNode*) get_operator(op_id);
             increase_cost(unary_op->cost, prop_cost);
             --unary_op->unsatisfied_preconditions;
             assert(unary_op->unsatisfied_preconditions >= 0);
-            if (unary_op->unsatisfied_preconditions == 0)
-                enqueue_if_necessary(unary_op->effect,
-                                     unary_op->cost, op_id);
+            if (unary_op->unsatisfied_preconditions <= 0) {
+                unary_op->update_precondition(enque_function, ((relaxation_heuristic::RelaxationHeuristic&) (*this)));
+            }
+
         }
     }
 }
@@ -105,7 +121,7 @@ void AdditiveHeuristic::mark_preferred_operators(
                     is_preferred = false;
                 }
             }
-            int operator_no = unary_op->operator_no;
+            int operator_no = 0;//unary_op->operator_no;
             if (is_preferred && operator_no != -1) {
                 // This is not an axiom.
                 OperatorProxy op = task_proxy.get_operators()[operator_no];
@@ -135,10 +151,10 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 int AdditiveHeuristic::compute_heuristic(const State &ancestor_state) {
     State state = convert_ancestor_state(ancestor_state);
     int h = compute_add_and_ff(state);
-    if (h != DEAD_END) {
-        for (PropID goal_id : goal_propositions)
-            mark_preferred_operators(state, goal_id);
-    }
+    //if (h != DEAD_END) {
+    //    for (PropID goal_id : goal_propositions)
+    //        mark_preferred_operators(state, goal_id);
+    //}
     return h;
 }
 

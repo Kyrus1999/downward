@@ -21,6 +21,7 @@ using PropID = int;
 using OpID = int;
 
 const OpID NO_OP = -1;
+const PropID NO_PROP= -1;
 
 struct Proposition {
     Proposition();
@@ -37,22 +38,41 @@ struct Proposition {
 
 static_assert(sizeof(Proposition) == 16, "Proposition has wrong size");
 
+class RelaxationHeuristic;
+
+
 struct UnaryOperator {
-    UnaryOperator(int num_preconditions,
-                  array_pool::ArrayPoolIndex preconditions,
-                  PropID effect,
-                  int operator_no, int base_cost);
+    UnaryOperator(int num_preconditions);
+    const int num_preconditions;
     int cost; // Used for h^max cost or h^add cost;
-              // includes operator cost (base_cost)
+    // includes operator cost (base_cost)
     int unsatisfied_preconditions;
-    PropID effect;
-    int base_cost;
-    int num_preconditions;
-    array_pool::ArrayPoolIndex preconditions;
-    int operator_no; // -1 for axioms; index into the task's operators otherwise
+    std::vector<UnaryOperator*> preconditions_ops; // UnaryOperator* dependent_on = nullptr;
+
+    virtual void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) = 0;
 };
 
-static_assert(sizeof(UnaryOperator) == 28, "UnaryOperator has wrong size");
+struct InnerNode : public UnaryOperator {
+    InnerNode(int num_preconditions,
+                  array_pool::ArrayPoolIndex preconditions);
+    array_pool::ArrayPoolIndex preconditions_props;
+    std::vector<UnaryOperator*> precondition_of;
+
+    void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) override;
+
+};
+
+struct EffectNode : public UnaryOperator {
+    EffectNode(PropID effect,
+    int operator_no, int base_cost);
+    const int base_cost;
+    PropID effect;
+    int operator_no; // -1 for axioms; index into the task's operators otherwise
+
+    void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) override;
+};
+
+//static_assert(sizeof(UnaryOperator) == 28, "UnaryOperator has wrong size");
 
 class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
@@ -61,7 +81,8 @@ class RelaxationHeuristic : public Heuristic {
     // proposition_offsets[var_no]: first PropID related to variable var_no
     std::vector<PropID> proposition_offsets;
 protected:
-    std::vector<UnaryOperator> unary_operators;
+    std::vector<EffectNode> effect_nodes;
+    std::vector<InnerNode> inner_nodes;
     std::vector<Proposition> propositions;
     std::vector<PropID> goal_propositions;
 
@@ -69,14 +90,16 @@ protected:
     array_pool::ArrayPool precondition_of_pool;
 
     array_pool::ArrayPoolSlice get_preconditions(OpID op_id) const {
-        const UnaryOperator &op = unary_operators[op_id];
-        return preconditions_pool.get_slice(op.preconditions, op.num_preconditions);
+        const InnerNode &op = (InnerNode&) inner_nodes[op_id];
+        return preconditions_pool.get_slice(op.preconditions_props, op.num_preconditions);
     }
 
     // HACK!
     std::vector<PropID> get_preconditions_vector(OpID op_id) const {
         auto view = get_preconditions(op_id);
         return std::vector<PropID>(view.begin(), view.end());
+        std::vector<PropID> temp;
+        return temp;
     }
 
     /*
@@ -90,12 +113,12 @@ protected:
         return prop_id;
     }
 
-    OpID get_op_id(const UnaryOperator &op) const {
-        OpID op_id = &op - unary_operators.data();
-        assert(utils::in_bounds(op_id, unary_operators));
+    OpID get_op_id(const EffectNode &op) const {
+        OpID op_id = &op - effect_nodes.data();
+        assert(utils::in_bounds(op_id, effect_nodes));
         return op_id;
     }
-
+    int get_num_cond_effects();
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
@@ -103,7 +126,7 @@ protected:
         return &propositions[prop_id];
     }
     UnaryOperator *get_operator(OpID op_id) {
-        return &unary_operators[op_id];
+        return &inner_nodes[op_id];
     }
 
     const Proposition *get_proposition(int var, int value) const;

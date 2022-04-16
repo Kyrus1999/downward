@@ -18,6 +18,8 @@ using relaxation_heuristic::NO_OP;
 
 using relaxation_heuristic::Proposition;
 using relaxation_heuristic::UnaryOperator;
+using relaxation_heuristic::EffectNode;
+using relaxation_heuristic::InnerNode;
 
 class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     /* Costs larger than MAX_COST_VALUE are clamped to max_value. The
@@ -31,6 +33,8 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
 
     priority_queues::AdaptiveQueue<PropID> queue;
     bool did_write_overflow_warning;
+    //void (AdditiveHeuristic::*enque_function)(PropID, int, OpID);
+    void (*enque_function)(relaxation_heuristic::RelaxationHeuristic&, PropID, int, OpID);
 
     void setup_exploration_queue();
     void setup_exploration_queue_state(const State &state);
@@ -38,6 +42,8 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     void mark_preferred_operators(const State &state, PropID goal_id);
 
     void enqueue_if_necessary(PropID prop_id, int cost, OpID op_id) {
+        if (prop_id == relaxation_heuristic::NO_PROP)
+            return;
         assert(cost >= 0);
         Proposition *prop = get_proposition(prop_id);
         if (prop->cost == -1 || prop->cost > cost) {
@@ -46,6 +52,10 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
             queue.push(cost, prop_id);
         }
         assert(prop->cost != -1 && prop->cost <= cost);
+    }
+
+    static void enque(relaxation_heuristic::RelaxationHeuristic &additive_heuristic, PropID prop_id, int cost, OpID op_id){
+        ((AdditiveHeuristic&) additive_heuristic).enqueue_if_necessary(prop_id, cost, op_id);
     }
 
     void increase_cost(int &cost, int amount) {

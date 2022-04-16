@@ -516,13 +516,13 @@ fast_downward_plugin(
     DEPENDENCY_ONLY
 )
 
-fast_downward_plugin(
+#[[fast_downward_plugin(
     NAME FF_HEURISTIC
     HELP "The FF heuristic (an implementation of the RPG heuristic)"
     SOURCES
         heuristics/ff_heuristic
     DEPENDS ADDITIVE_HEURISTIC TASK_PROPERTIES
-)
+)]]
 
 fast_downward_plugin(
     NAME GOAL_COUNT_HEURISTIC
@@ -548,13 +548,13 @@ fast_downward_plugin(
     DEPENDS PRIORITY_QUEUES TASK_PROPERTIES
 )
 
-fast_downward_plugin(
+#[[fast_downward_plugin(
     NAME MAX_HEURISTIC
     HELP "The Max heuristic"
     SOURCES
         heuristics/max_heuristic
     DEPENDS PRIORITY_QUEUES RELAXATION_HEURISTIC
-)
+)]]
 
 fast_downward_plugin(
     NAME CORE_TASKS
