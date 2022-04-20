@@ -40,36 +40,42 @@ static_assert(sizeof(Proposition) == 16, "Proposition has wrong size");
 
 class RelaxationHeuristic;
 
-
+using f_enqueue = void (*)(RelaxationHeuristic*, PropID, int, OpID);
 struct UnaryOperator {
-    UnaryOperator(int num_preconditions);
+    explicit UnaryOperator(int num_preconditions);
+    virtual ~UnaryOperator() {};
     const int num_preconditions;
     int cost; // Used for h^max cost or h^add cost;
     // includes operator cost (base_cost)
     int unsatisfied_preconditions;
     std::vector<UnaryOperator*> preconditions_ops; // UnaryOperator* dependent_on = nullptr;
 
-    virtual void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) = 0;
+
+    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic)=0;
 };
 
 struct InnerNode : public UnaryOperator {
-    InnerNode(int num_preconditions,
+    explicit InnerNode(int num_preconditions,
                   array_pool::ArrayPoolIndex preconditions);
+    explicit InnerNode(int num_preconditions,
+              array_pool::ArrayPoolIndex preconditions, bool is_conditional_effect_node);
+    virtual ~InnerNode(){};
     array_pool::ArrayPoolIndex preconditions_props;
     std::vector<UnaryOperator*> precondition_of;
-
-    void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) override;
+    bool is_conditional_effect_node;
+    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) override;
 
 };
 
 struct EffectNode : public UnaryOperator {
-    EffectNode(PropID effect,
-    int operator_no, int base_cost);
+    explicit EffectNode(PropID effect,
+                        int operator_no, int base_cost);
+    virtual ~EffectNode(){};
     const int base_cost;
     PropID effect;
     int operator_no; // -1 for axioms; index into the task's operators otherwise
 
-    void update_precondition(void (*function)(RelaxationHeuristic&, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) override;
+    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) override;
 };
 
 //static_assert(sizeof(UnaryOperator) == 28, "UnaryOperator has wrong size");

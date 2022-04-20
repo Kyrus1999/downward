@@ -33,11 +33,9 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
 
     priority_queues::AdaptiveQueue<PropID> queue;
     bool did_write_overflow_warning;
-    //void (AdditiveHeuristic::*enque_function)(PropID, int, OpID);
-    void (*enque_function)(relaxation_heuristic::RelaxationHeuristic&, PropID, int, OpID);
+    void (*enque_function)(relaxation_heuristic::RelaxationHeuristic*, PropID, int, OpID);
 
-    void setup_exploration_queue();
-    void setup_exploration_queue_state(const State &state);
+    void setup_exploration_queue(const State &state);
     void relaxed_exploration();
     void mark_preferred_operators(const State &state, PropID goal_id);
 
@@ -54,8 +52,8 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
         assert(prop->cost != -1 && prop->cost <= cost);
     }
 
-    static void enque(relaxation_heuristic::RelaxationHeuristic &additive_heuristic, PropID prop_id, int cost, OpID op_id){
-        ((AdditiveHeuristic&) additive_heuristic).enqueue_if_necessary(prop_id, cost, op_id);
+    static void enque(relaxation_heuristic::RelaxationHeuristic *additive_heuristic, PropID prop_id, int cost, OpID op_id){
+        ((AdditiveHeuristic*) additive_heuristic)->enqueue_if_necessary(prop_id, cost, op_id);
     }
 
     void increase_cost(int &cost, int amount) {

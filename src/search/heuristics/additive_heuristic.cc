@@ -18,8 +18,7 @@ const int AdditiveHeuristic::MAX_COST_VALUE;
 AdditiveHeuristic::AdditiveHeuristic(const Options &opts)
     : RelaxationHeuristic(opts),
       did_write_overflow_warning(false),
-      enque_function(enque) {
-      //enque_function(&enqueue_if_necessary) {
+      enque_function(&enque) {
     if (log.is_at_least_normal()) {
         log << "Initializing additive heuristic..." << endl;
     }
@@ -40,7 +39,7 @@ void AdditiveHeuristic::write_overflow_warning() {
 }
 
 // heuristic computation
-void AdditiveHeuristic::setup_exploration_queue() {
+void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     queue.clear();
 
     for (Proposition &prop : propositions) {
@@ -49,28 +48,20 @@ void AdditiveHeuristic::setup_exploration_queue() {
     }
 
     // Deal with operators and axioms without preconditions_props.
-    for (UnaryOperator &op : inner_nodes) {
-        op.unsatisfied_preconditions = op.num_preconditions;
+    for (relaxation_heuristic::InnerNode &op : inner_nodes) {
+        op.unsatisfied_preconditions = (op.is_conditional_effect_node) ? op.num_preconditions + 1 : op.num_preconditions;
         op.cost = 0;
-        if (op.unsatisfied_preconditions == 0)
-            op.update_precondition(enque_function, ((relaxation_heuristic::RelaxationHeuristic&) (*this)));
+        if (op.unsatisfied_preconditions == 0) {
+            cout << "A1" << endl;
+            op.update_precondition(enque_function, this);
+        }
     }
 
     for (EffectNode &op : effect_nodes) {
-            op.unsatisfied_preconditions = op.num_preconditions;
-            op.cost = op.base_cost; // will be increased by precondition costs
-        }
-
-    for (relaxation_heuristic::InnerNode &op : inner_nodes) {
-        cout << &op << ": ";
-        for (auto &dep : op.precondition_of) {
-            cout << &dep <<", ";
-        }
-        cout <<"\n";
+        op.unsatisfied_preconditions = op.num_preconditions;
+        op.cost = op.base_cost; // will be increased by precondition costs
     }
-}
 
-void AdditiveHeuristic::setup_exploration_queue_state(const State &state) {
     for (FactProxy fact : state) {
         PropID init_prop = get_prop_id(fact);
         enqueue_if_necessary(init_prop, 0, NO_OP);
@@ -80,6 +71,7 @@ void AdditiveHeuristic::setup_exploration_queue_state(const State &state) {
 void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
     while (!queue.empty()) {
+
         pair<int, PropID> top_pair = queue.pop();
         int distance = top_pair.first;
         PropID prop_id = top_pair.second;
@@ -99,7 +91,8 @@ void AdditiveHeuristic::relaxed_exploration() {
             --unary_op->unsatisfied_preconditions;
             assert(unary_op->unsatisfied_preconditions >= 0);
             if (unary_op->unsatisfied_preconditions <= 0) {
-                unary_op->update_precondition(enque_function, ((relaxation_heuristic::RelaxationHeuristic&) (*this)));
+                cout << "A2" << endl;
+                unary_op->update_precondition(enque_function, this);
             }
 
         }
@@ -133,8 +126,7 @@ void AdditiveHeuristic::mark_preferred_operators(
 }
 
 int AdditiveHeuristic::compute_add_and_ff(const State &state) {
-    setup_exploration_queue();
-    setup_exploration_queue_state(state);
+    setup_exploration_queue(state);
     relaxed_exploration();
 
     int total_cost = 0;

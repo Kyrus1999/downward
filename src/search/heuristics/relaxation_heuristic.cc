@@ -28,15 +28,23 @@ UnaryOperator::UnaryOperator(int num_preconditions)
 InnerNode::InnerNode(int num_preconditions,
       array_pool::ArrayPoolIndex preconditions)
       : UnaryOperator(num_preconditions),
-        preconditions_props(preconditions) {
+        preconditions_props(preconditions),
+        is_conditional_effect_node(false) {
+}
+InnerNode::InnerNode(int num_preconditions,
+                     array_pool::ArrayPoolIndex preconditions, bool is_conditional_effect_node)
+        : UnaryOperator(num_preconditions),
+          preconditions_props(preconditions),
+          is_conditional_effect_node(is_conditional_effect_node) {
 }
 
-void InnerNode::update_precondition(void (*function)(RelaxationHeuristic &relaxation_heuristic, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) {
-    for (auto & unary_operator : this->precondition_of) {
+void InnerNode::update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) {
+    for (auto * unary_operator : this->precondition_of) {
         unary_operator->unsatisfied_preconditions--;
         unary_operator->cost += this->cost;
 
         if (unary_operator->unsatisfied_preconditions <= 0) {
+            cout << "A3" << endl;
             unary_operator->update_precondition(function, relaxation_heuristic);
         }
     }
@@ -51,7 +59,7 @@ EffectNode::EffectNode(PropID effect,
 
 }
 
-void EffectNode::update_precondition(void (*function)(RelaxationHeuristic &relaxation_heuristic, PropID, int, OpID), RelaxationHeuristic &relaxation_heuristic) {
+void EffectNode::update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) {
     function(relaxation_heuristic, this->effect, this->cost, this->operator_no);
 }
 
@@ -188,16 +196,13 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             utils::sort_unique(effect_preconds);
             array_pool::ArrayPoolIndex effect_preconds_index =
                     preconditions_pool.append(effect_preconds);
-            inner_nodes.emplace_back(effect_preconds.size() + 1, effect_preconds_index);
+            inner_nodes.emplace_back(effect_preconds.size(), effect_preconds_index, true);
             InnerNode &conditional_effect_node = inner_nodes.back();
             //conditional_effect_node.precondition_of.reserve(1);
             eff_node.preconditions_ops.push_back(&conditional_effect_node);
             conditional_effect_node.precondition_of.push_back(&eff_node);
             conditional_effect_node.preconditions_ops.push_back(&condition_node);
             condition_node.precondition_of.push_back(&conditional_effect_node);
-            effect_nodes.push_back(eff_node);
-            inner_nodes.push_back(conditional_effect_node);
-
         }
 
     }
