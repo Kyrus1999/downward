@@ -17,8 +17,7 @@ const int AdditiveHeuristic::MAX_COST_VALUE;
 // construction and destruction
 AdditiveHeuristic::AdditiveHeuristic(const Options &opts)
     : RelaxationHeuristic(opts),
-      did_write_overflow_warning(false),
-      enque_function(&enque) {
+      did_write_overflow_warning(false) {
     if (log.is_at_least_normal()) {
         log << "Initializing additive heuristic..." << endl;
     }
@@ -42,40 +41,37 @@ void AdditiveHeuristic::write_overflow_warning() {
 void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     queue.clear();
 
-    for (Proposition &prop : propositions) {
+    for (auto &prop : propositions) {
         prop.cost = -1;
         prop.marked = false;
     }
 
     // Deal with operators and axioms without preconditions_props.
-    for (relaxation_heuristic::InnerNode &op : inner_nodes) {
-        op.unsatisfied_preconditions = (op.is_conditional_effect_node) ? op.num_preconditions + 1 : op.num_preconditions;
+    for (auto &op : operator_nodes) {
+        op.unsatisfied_preconditions = op.num_preconditions;
         op.cost = 0;
         if (op.unsatisfied_preconditions == 0) {
             cout << "A1" << endl;
-            op.update_precondition(enque_function, this);
+            op.update_precondition(queue, &op);
         }
     }
 
-    for (EffectNode &op : effect_nodes) {
-        op.unsatisfied_preconditions = op.num_preconditions;
-        op.cost = op.base_cost; // will be increased by precondition costs
-    }
-
     for (FactProxy fact : state) {
-        PropID init_prop = get_prop_id(fact);
-        enqueue_if_necessary(init_prop, 0, NO_OP);
+        PropositionNode &prop = propositions[get_prop_id(fact)];
+        prop.cost = 0;
+        prop.reached_by = NO_OP;
+        queue.push(0, &prop);
     }
 }
 
 void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
+    int iteration = 0;
     while (!queue.empty()) {
-
-        pair<int, PropID> top_pair = queue.pop();
+        cout << "ITER" << ++iteration << endl;
+        pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
-        PropID prop_id = top_pair.second;
-        Proposition *prop = get_proposition(prop_id);
+        PropositionNode * prop = top_pair.second;
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
@@ -83,47 +79,36 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
-        vector<PropID > new_props;
-        for (OpID op_id : precondition_of_pool.get_slice(
-                 prop->precondition_of, prop->num_precondition_occurences)) {
-            relaxation_heuristic::InnerNode *unary_op = (relaxation_heuristic::InnerNode*) get_operator(op_id);
-            increase_cost(unary_op->cost, prop_cost);
-            --unary_op->unsatisfied_preconditions;
-            assert(unary_op->unsatisfied_preconditions >= 0);
-            if (unary_op->unsatisfied_preconditions <= 0) {
-                cout << "A2" << endl;
-                unary_op->update_precondition(enque_function, this);
-            }
-
-        }
+        prop->update_precondition(queue);
     }
 }
 
-void AdditiveHeuristic::mark_preferred_operators(
-    const State &state, PropID goal_id) {
-    Proposition *goal = get_proposition(goal_id);
-    if (!goal->marked) { // Only consider each subgoal once.
-        goal->marked = true;
-        OpID op_id = goal->reached_by;
-        if (op_id != NO_OP) { // We have not yet chained back to a start node.
-            UnaryOperator *unary_op = get_operator(op_id);
-            bool is_preferred = true;
-            for (PropID precond : get_preconditions(op_id)) {
-                mark_preferred_operators(state, precond);
-                if (get_proposition(precond)->reached_by != NO_OP) {
-                    is_preferred = false;
-                }
-            }
-            int operator_no = 0;//unary_op->operator_no;
-            if (is_preferred && operator_no != -1) {
-                // This is not an axiom.
-                OperatorProxy op = task_proxy.get_operators()[operator_no];
-                assert(task_properties::is_applicable(op, state));
-                set_preferred(op);
-            }
-        }
-    }
-}
+// TODO
+//void AdditiveHeuristic::mark_preferred_operators(
+//    const State &state, PropID goal_id) {
+//    PropositionNode *goal = &propositions[goal_id];
+//    if (!goal->marked) { // Only consider each subgoal once.
+//        goal->marked = true;
+//        OpID op_id = goal->reached_by;
+//        if (op_id != NO_OP) { // We have not yet chained back to a start node.
+//            UnaryOperator *unary_op = get_operator(op_id);
+//            bool is_preferred = true;
+//            for (PropID precond : get_preconditions(op_id)) {
+//                mark_preferred_operators(state, precond);
+//                if (get_proposition(precond)->reached_by != NO_OP) {
+//                    is_preferred = false;
+//                }
+//            }
+//            int operator_no = 0;//unary_op->operator_no;
+//            if (is_preferred && operator_no != -1) {
+//                // This is not an axiom.
+//                OperatorProxy op = task_proxy.get_operators()[operator_no];
+//                assert(task_properties::is_applicable(op, state));
+//                set_preferred(op);
+//            }
+//        }
+//    }
+//}
 
 int AdditiveHeuristic::compute_add_and_ff(const State &state) {
     setup_exploration_queue(state);
@@ -131,11 +116,12 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 
     int total_cost = 0;
     for (PropID goal_id : goal_propositions) {
-        const Proposition *goal = get_proposition(goal_id);
+        const PropositionNode *goal = &propositions[goal_id];
         int goal_cost = goal->cost;
         if (goal_cost == -1)
             return DEAD_END;
-        increase_cost(total_cost, goal_cost);
+// TODO:        increase_cost(total_cost, goal_cost);
+    total_cost += goal_cost;
     }
     return total_cost;
 }
