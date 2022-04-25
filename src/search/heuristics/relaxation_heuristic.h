@@ -5,6 +5,7 @@
 
 #include "../heuristic.h"
 
+#include "../algorithms/priority_queues.h"
 #include "../utils/collections.h"
 
 #include <cassert>
@@ -14,8 +15,6 @@ class FactProxy;
 class OperatorProxy;
 
 namespace relaxation_heuristic {
-struct Proposition;
-struct UnaryOperator;
 
 using PropID = int;
 using OpID = int;
@@ -23,62 +22,60 @@ using OpID = int;
 const OpID NO_OP = -1;
 const PropID NO_PROP= -1;
 
-struct Proposition {
-    Proposition();
-    int cost; // used for h^max cost or h^add cost
+class RelaxationHeuristic;
+struct PropositionNode;
+
+using PropQueue = priority_queues::AdaptiveQueue<PropositionNode*>;
+
+struct GraphNode {
+    int cost; // Used for h^max cost or h^add cost;
+    std::vector<GraphNode*> precondition_of;
+    
+    explicit GraphNode();
+    explicit GraphNode(std::vector<GraphNode*> &&precondition_of);
+    virtual ~GraphNode() {};
+    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
+    virtual std::string myname() {return "GrpahNode";}
+};
+
+
+struct OperatorNode : public GraphNode {
+    const int base_cost;
+    const int num_preconditions;
+    int operator_no; // -1 for axioms; index into the task's operators otherwise
+    int unsatisfied_preconditions;
+// preconditions_props(preconditions),
+//    PropID effect;
+
+    explicit OperatorNode(int base_cost, int num_preconditions, int operator_no);
+    virtual ~OperatorNode() {};
+    //TODO: delete the copy constructor again
+//    OperatorNode(const OperatorNode &) = delete;
+//                          int PropID effect,
+ virtual void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+    virtual std::string myname() override {return "OPeratorNode";}
+};
+
+struct PropositionNode: public GraphNode {
+    PropID prop_id;
     // TODO: Make sure in constructor that reached_by does not overflow.
     OpID reached_by : 30;
     /* The following two variables are conceptually bools, but Visual C++ does
        not support packing ints and bools together in a bitfield. */
     unsigned int is_goal : 1;
     unsigned int marked : 1; // used for preferred operators of h^add and h^FF
-    int num_precondition_occurences;
-    array_pool::ArrayPoolIndex precondition_of;
-};
-
-static_assert(sizeof(Proposition) == 16, "Proposition has wrong size");
-
-class RelaxationHeuristic;
-
-using f_enqueue = void (*)(RelaxationHeuristic*, PropID, int, OpID);
-struct UnaryOperator {
-    explicit UnaryOperator(int num_preconditions);
-    virtual ~UnaryOperator() {};
-    const int num_preconditions;
-    int cost; // Used for h^max cost or h^add cost;
-    // includes operator cost (base_cost)
-    int unsatisfied_preconditions;
-    std::vector<UnaryOperator*> preconditions_ops; // UnaryOperator* dependent_on = nullptr;
-
-
-    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic)=0;
-};
-
-struct InnerNode : public UnaryOperator {
-    explicit InnerNode(int num_preconditions,
-                  array_pool::ArrayPoolIndex preconditions);
-    explicit InnerNode(int num_preconditions,
-              array_pool::ArrayPoolIndex preconditions, bool is_conditional_effect_node);
-    virtual ~InnerNode(){};
-    array_pool::ArrayPoolIndex preconditions_props;
-    std::vector<UnaryOperator*> precondition_of;
-    bool is_conditional_effect_node;
-    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) override;
+    int num_precondition_occurrences;
+    explicit PropositionNode(PropID prop_id);
+    virtual ~PropositionNode() {};
+    //TODO: delete the copy constructor again
+//    PropositionNode(const PropositionNode &) = delete;
+    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+    void update_precondition(PropQueue &queue);
+    virtual std::string myname() override {return "PropositionNode";}
 
 };
 
-struct EffectNode : public UnaryOperator {
-    explicit EffectNode(PropID effect,
-                        int operator_no, int base_cost);
-    virtual ~EffectNode(){};
-    const int base_cost;
-    PropID effect;
-    int operator_no; // -1 for axioms; index into the task's operators otherwise
-
-    virtual void update_precondition(f_enqueue function, RelaxationHeuristic *relaxation_heuristic) override;
-};
-
-//static_assert(sizeof(UnaryOperator) == 28, "UnaryOperator has wrong size");
+//static_assert(sizeof(GraphNode) == 28, "GraphNode has wrong size");
 
 class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
@@ -87,60 +84,62 @@ class RelaxationHeuristic : public Heuristic {
     // proposition_offsets[var_no]: first PropID related to variable var_no
     std::vector<PropID> proposition_offsets;
 protected:
-    std::vector<EffectNode> effect_nodes;
-    std::vector<InnerNode> inner_nodes;
-    std::vector<Proposition> propositions;
+    std::vector<OperatorNode> operator_nodes;
+    std::vector<PropositionNode> propositions;
     std::vector<PropID> goal_propositions;
 
-    array_pool::ArrayPool preconditions_pool;
-    array_pool::ArrayPool precondition_of_pool;
+//    array_pool::ArrayPool preconditions_pool;
+//    array_pool::ArrayPool precondition_of_pool;
 
-    array_pool::ArrayPoolSlice get_preconditions(OpID op_id) const {
-        const InnerNode &op = (InnerNode&) inner_nodes[op_id];
-        return preconditions_pool.get_slice(op.preconditions_props, op.num_preconditions);
-    }
+//    array_pool::ArrayPoolSlice get_preconditions(OpID op_id) const {
+//        const InnerNode &op = (InnerNode&) inner_nodes[op_id];
+//        return preconditions_pool.get_slice(op.preconditions_props, op.num_preconditions);
+//    }
 
     // HACK!
-    std::vector<PropID> get_preconditions_vector(OpID op_id) const {
-        auto view = get_preconditions(op_id);
-        return std::vector<PropID>(view.begin(), view.end());
-        std::vector<PropID> temp;
-        return temp;
-    }
+//    std::vector<PropID> get_preconditions_vector(OpID op_id) const {
+//        auto view = get_preconditions(op_id);
+//        return std::vector<PropID>(view.begin(), view.end());
+//        std::vector<PropID> temp;
+//        return temp;
+//    }
 
     /*
       TODO: Some of these protected methods are only needed for the
       CEGAR hack in the additive heuristic and should eventually go
       away.
     */
-    PropID get_prop_id(const Proposition &prop) const {
-        PropID prop_id = &prop - propositions.data();
-        assert(utils::in_bounds(prop_id, propositions));
-        return prop_id;
-    }
 
-    OpID get_op_id(const EffectNode &op) const {
-        OpID op_id = &op - effect_nodes.data();
-        assert(utils::in_bounds(op_id, effect_nodes));
-        return op_id;
-    }
+
+//    PropID get_prop_id(const Proposition &prop) const {
+//        PropID prop_id = &prop - propositions.data();
+//        assert(utils::in_bounds(prop_id, propositions));
+//        return prop_id;
+//    }
+//
+//    OpID get_op_id(const EffectNode &op) const {
+//        OpID op_id = &op - effect_nodes.data();
+//        assert(utils::in_bounds(op_id, effect_nodes));
+//        return op_id;
+//    }
     int get_num_cond_effects();
+//    PropositionNode * get_prop_node(int var, int value) const;
+//    PropositionNode * get_prop_node(const FactProxy &fact) const;
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
-    Proposition *get_proposition(PropID prop_id) {
-        return &propositions[prop_id];
-    }
-    UnaryOperator *get_operator(OpID op_id) {
-        return &inner_nodes[op_id];
-    }
+//    PropositionNode *get_proposition(PropID prop_id) {
+//        return propositions[prop_id];
+//    }
+//    GraphNode *get_operator(OpID op_id) {
+//        return &inner_nodes[op_id];
+//    }
 
-    const Proposition *get_proposition(int var, int value) const;
-    Proposition *get_proposition(int var, int value);
-    Proposition *get_proposition(const FactProxy &fact);
+//    const Proposition *get_proposition(int var, int value) const;
+    int get_proposition_cost(int var, int value) const;
+//    Proposition *get_proposition(const FactProxy &fact);
 public:
     explicit RelaxationHeuristic(const options::Options &options);
-
     virtual bool dead_ends_are_reliable() const override;
 };
 }
