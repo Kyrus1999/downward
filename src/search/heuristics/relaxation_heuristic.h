@@ -24,15 +24,26 @@ const PropID NO_PROP= -1;
 
 class RelaxationHeuristic;
 struct PropositionNode;
+struct NodePool;
+
+const int OPERATOR = 0;
+const int PROPOSITION = 1;
+
+struct SaveLocation {
+    explicit SaveLocation(int vector, int index);
+    const int vector;
+    const int index;
+};
 
 using PropQueue = priority_queues::AdaptiveQueue<PropositionNode*>;
 
 struct GraphNode {
     int cost; // Used for h^max cost or h^add cost;
-    std::vector<GraphNode*> precondition_of;
-    
+    std::vector<SaveLocation> precondition_of;
+    NodePool *np;
     explicit GraphNode();
-    explicit GraphNode(std::vector<GraphNode*> &&precondition_of);
+    explicit GraphNode(NodePool* np);
+    explicit GraphNode(std::vector<SaveLocation> &&precondition_of, NodePool* np);
     virtual ~GraphNode() = default;
     virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
     virtual std::string myname() {return "GraphNode";}
@@ -47,7 +58,7 @@ struct OperatorNode : public GraphNode {
 // preconditions_props(preconditions),
 //    PropID effect;
 
-    explicit OperatorNode(int base_cost, int num_preconditions, int operator_no);
+    explicit OperatorNode(int base_cost, int num_preconditions, int operator_no, NodePool *np);
     virtual ~OperatorNode() = default;
     //TODO: delete the copy constructor again
 //    OperatorNode(const OperatorNode &) = delete;
@@ -65,7 +76,7 @@ struct PropositionNode: public GraphNode {
     unsigned int is_goal : 1;
     unsigned int marked : 1; // used for preferred operators of h^add and h^FF
     int num_precondition_occurrences;
-    explicit PropositionNode(PropID prop_id);
+    explicit PropositionNode(PropID prop_id, NodePool *np);
     virtual ~PropositionNode() = default;
     //TODO: delete the copy constructor again
 //    PropositionNode(const PropositionNode &) = delete;
@@ -77,6 +88,13 @@ struct PropositionNode: public GraphNode {
 
 //static_assert(sizeof(GraphNode) == 28, "GraphNode has wrong size");
 
+struct NodePool {
+    std::vector<OperatorNode> operator_nodes;
+    std::vector<PropositionNode> propositions;
+
+    GraphNode *get_address(SaveLocation save_location);
+};
+
 class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
     void simplify();
@@ -84,8 +102,7 @@ class RelaxationHeuristic : public Heuristic {
     // proposition_offsets[var_no]: first PropID related to variable var_no
     std::vector<PropID> proposition_offsets;
 protected:
-    std::vector<OperatorNode> operator_nodes;
-    std::vector<PropositionNode> propositions;
+    NodePool node_pool;
     std::vector<PropID> goal_propositions;
 
 //    array_pool::ArrayPool preconditions_pool;

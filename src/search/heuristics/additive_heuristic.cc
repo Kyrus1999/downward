@@ -41,23 +41,23 @@ void AdditiveHeuristic::write_overflow_warning() {
 void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     queue.clear();
 
-    for (auto &prop : propositions) {
+    for (auto &prop : node_pool.propositions) {
         prop.cost = -1;
         prop.marked = false;
     }
 
     // Deal with operators and axioms without preconditions_props.
-    for (auto &op : operator_nodes) {
+    for (auto &op : node_pool.operator_nodes) {
         op.unsatisfied_preconditions = op.num_preconditions;
-        op.cost = 0;
+        op.cost = 0; // since no there are not effect nodes, shouldn't this be op.cost = op.base_cost?
         if (op.unsatisfied_preconditions == 0) {
-            cout << "A1" << endl;
+            //cout << "A1" << endl;
             op.update_precondition(queue, &op);
         }
     }
 
     for (FactProxy fact : state) {
-        PropositionNode &prop = propositions[get_prop_id(fact)];
+        PropositionNode &prop = node_pool.propositions[get_prop_id(fact)];
         prop.cost = 0;
         prop.reached_by = NO_OP;
         queue.push(0, &prop);
@@ -68,7 +68,7 @@ void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
     int iteration = 0;
     while (!queue.empty()) {
-        cout << "ITER" << ++iteration << endl;
+        //cout << "ITER" << ++iteration << endl;
         pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
         PropositionNode * prop = top_pair.second;
@@ -116,7 +116,7 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 
     int total_cost = 0;
     for (PropID goal_id : goal_propositions) {
-        const PropositionNode *goal = &propositions[goal_id];
+        const PropositionNode *goal = &node_pool.propositions[goal_id];
         int goal_cost = goal->cost;
         if (goal_cost == -1)
             return DEAD_END;
