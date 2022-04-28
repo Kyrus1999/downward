@@ -36,7 +36,6 @@ struct GraphNode {
     virtual ~GraphNode() = default;
     virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
     virtual std::string myname() {return "GraphNode";}
-    virtual bool is_preferred();
     virtual bool is_proposition() = 0;
 };
 
@@ -57,7 +56,6 @@ struct OperatorNode : public GraphNode {
 //                          int PropID effect,
     void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     std::string myname() override {return "OperatorNode";}
-    bool is_preferred() override;
     bool is_proposition() override {return false;}
 };
 
@@ -77,7 +75,6 @@ struct PropositionNode: public GraphNode {
     void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     void update_precondition(PropQueue &queue);
     std::string myname() override {return "PropositionNode";}
-    bool is_preferred() override;
     bool is_proposition() override {return true;}
 };
 

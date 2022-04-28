@@ -46,9 +46,6 @@ void PropositionNode::update_precondition(PropQueue &queue) {
     }
 }
 
-bool PropositionNode::is_preferred() {
-    return reached_by == NO_OP;
-}
 
 OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no)
     : GraphNode(),
