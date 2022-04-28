@@ -81,32 +81,32 @@ void AdditiveHeuristic::relaxed_exploration() {
     }
 }
 
-// TODO
-//void AdditiveHeuristic::mark_preferred_operators(
-//    const State &state, PropID goal_id) {
-//    PropositionNode *goal = &propositions[goal_id];
-//    if (!goal->marked) { // Only consider each subgoal once.
-//        goal->marked = true;
-//        OpID op_id = goal->reached_by;
-//        if (op_id != NO_OP) { // We have not yet chained back to a start node.
-//            UnaryOperator *unary_op = get_operator(op_id);
-//            bool is_preferred = true;
-//            for (PropID precond : get_preconditions(op_id)) {
-//                mark_preferred_operators(state, precond);
-//                if (get_proposition(precond)->reached_by != NO_OP) {
-//                    is_preferred = false;
-//                }
-//            }
-//            int operator_no = 0;//unary_op->operator_no;
-//            if (is_preferred && operator_no != -1) {
-//                // This is not an axiom.
-//                OperatorProxy op = task_proxy.get_operators()[operator_no];
-//                assert(task_properties::is_applicable(op, state));
-//                set_preferred(op);
-//            }
-//        }
-//    }
-//}
+
+void AdditiveHeuristic::mark_preferred_operators(
+    const State &state, PropID goal_id) {
+    PropositionNode* goal = propositions[goal_id];
+    if (!goal->marked) { // Only consider each subgoal once.
+        goal->marked = true;
+        OpID op_id = goal->reached_by;
+        if (op_id != NO_OP) { // We have not yet chained back to a start node.
+            OperatorNode *operator_node = get_operator(op_id);
+            bool is_preferred = true;
+            for (auto *precond : get_preconditions(op_id)) {
+                mark_preferred_operators(state, precond->prop_id);
+                if (precond->reached_by != NO_OP) {
+                    is_preferred = false;
+                }
+            }
+            int operator_no = operator_node->operator_no;
+            if (is_preferred && operator_no != -1) {
+                // This is not an axiom.
+                OperatorProxy op = task_proxy.get_operators()[operator_no];
+                assert(task_properties::is_applicable(op, state));
+                set_preferred(op);
+            }
+        }
+    }
+}
 
 int AdditiveHeuristic::compute_add_and_ff(const State &state) {
     setup_exploration_queue(state);
@@ -127,10 +127,10 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 int AdditiveHeuristic::compute_heuristic(const State &ancestor_state) {
     State state = convert_ancestor_state(ancestor_state);
     int h = compute_add_and_ff(state);
-    //if (h != DEAD_END) {
-    //    for (PropID goal_id : goal_propositions)
-    //        mark_preferred_operators(state, goal_id);
-    //}
+    if (h != DEAD_END) {
+        for (PropID goal_id : goal_propositions)
+            mark_preferred_operators(state, goal_id);
+    }
     return h;
 }
 

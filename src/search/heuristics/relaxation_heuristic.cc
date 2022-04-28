@@ -46,6 +46,9 @@ void PropositionNode::update_precondition(PropQueue &queue) {
     }
 }
 
+bool PropositionNode::is_preferred() {
+    return reached_by == NO_OP;
+}
 
 OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no)
     : GraphNode(),
@@ -205,6 +208,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     operator_nodes.push_back(operator_node);
     for (auto precondition: precondition_props) {
         precondition->precondition_of.push_back(operator_node);
+        operator_node->preconditions.push_back(precondition);
     }
 //    operator_node.precondition_of.reserve(op.get_effects().size());
     for (EffectProxy effect : op.get_effects()) {
@@ -228,6 +232,10 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             operator_nodes.push_back(conditional_effect);
             for (auto precondition: effect_conditions) {
                 precondition->precondition_of.push_back(conditional_effect);
+                conditional_effect->preconditions.push_back(precondition);
+            }
+            for (auto precondition: precondition_props) {
+                conditional_effect->preconditions.push_back(precondition);
             }
             operator_node->precondition_of.push_back(conditional_effect);
             conditional_effect->precondition_of.push_back(effect_prop);

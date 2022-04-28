@@ -36,6 +36,8 @@ struct GraphNode {
     virtual ~GraphNode() = default;
     virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
     virtual std::string myname() {return "GraphNode";}
+    virtual bool is_preferred();
+    virtual bool is_proposition() = 0;
 };
 
 
@@ -44,6 +46,7 @@ struct OperatorNode : public GraphNode {
     const int num_preconditions;
     int operator_no; // -1 for axioms; index into the task's operators otherwise
     int unsatisfied_preconditions;
+    std::vector<PropositionNode*> preconditions;
 // preconditions_props(preconditions),
 //    PropID effect;
 
@@ -52,8 +55,10 @@ struct OperatorNode : public GraphNode {
     //TODO: delete the copy constructor again
 //    OperatorNode(const OperatorNode &) = delete;
 //                          int PropID effect,
- virtual void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
-    virtual std::string myname() override {return "OperatorNode";}
+    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+    std::string myname() override {return "OperatorNode";}
+    bool is_preferred() override;
+    bool is_proposition() override {return false;}
 };
 
 struct PropositionNode: public GraphNode {
@@ -69,10 +74,11 @@ struct PropositionNode: public GraphNode {
     virtual ~PropositionNode() = default;
     //TODO: delete the copy constructor again
 //    PropositionNode(const PropositionNode &) = delete;
-    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     void update_precondition(PropQueue &queue);
-    virtual std::string myname() override {return "PropositionNode";}
-
+    std::string myname() override {return "PropositionNode";}
+    bool is_preferred() override;
+    bool is_proposition() override {return true;}
 };
 
 //static_assert(sizeof(GraphNode) == 28, "GraphNode has wrong size");
@@ -91,17 +97,14 @@ protected:
 //    array_pool::ArrayPool preconditions_pool;
 //    array_pool::ArrayPool precondition_of_pool;
 
-//    array_pool::ArrayPoolSlice get_preconditions(OpID op_id) const {
-//        const InnerNode &op = (InnerNode&) inner_nodes[op_id];
-//        return preconditions_pool.get_slice(op.preconditions_props, op.num_preconditions);
-//    }
+    std::vector<PropositionNode*> get_preconditions(OpID op_id) const {
+        return operator_nodes[op_id]->preconditions;
+    }
 
     // HACK!
 //    std::vector<PropID> get_preconditions_vector(OpID op_id) const {
 //        auto view = get_preconditions(op_id);
 //        return std::vector<PropID>(view.begin(), view.end());
-//        std::vector<PropID> temp;
-//        return temp;
 //    }
 
     /*
@@ -131,9 +134,9 @@ protected:
 //    PropositionNode *get_proposition(PropID prop_id) {
 //        return propositions[prop_id];
 //    }
-//    GraphNode *get_operator(OpID op_id) {
-//        return &inner_nodes[op_id];
-//    }
+    OperatorNode *get_operator(OpID op_id) {
+        return operator_nodes[op_id];
+    }
 
 //    const Proposition *get_proposition(int var, int value) const;
     int get_proposition_cost(int var, int value) const;

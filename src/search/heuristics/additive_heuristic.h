@@ -27,24 +27,8 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
 
     void setup_exploration_queue(const State &state);
     void relaxed_exploration();
-//    void mark_preferred_operators(const State &state, PropID goal_id);
-// not necessary anymore, became part of `PropositionNode::update_preconditions()`
-//    void enqueue_if_necessary(PropID prop_id, int cost, OpID op_id) {
-//        if (prop_id == relaxation_heuristic::NO_PROP)
-//            return;
-//        assert(cost >= 0);
-//        Proposition *prop = get_proposition(prop_id);
-//        if (prop->cost == -1 || prop->cost > cost) {
-//            prop->cost = cost;
-//            prop->reached_by = op_id;
-//            queue.push(cost, prop_id);
-//        }
-//        assert(prop->cost != -1 && prop->cost <= cost);
-//    }
-//
-//    static void enque(relaxation_heuristic::RelaxationHeuristic *additive_heuristic, PropID prop_id, int cost, OpID op_id){
-//        ((AdditiveHeuristic*) additive_heuristic)->enqueue_if_necessary(prop_id, cost, op_id);
-//    }
+    void mark_preferred_operators(const State &state, PropID goal_id);
+
 
 // TODO : add back in
 //    void increase_cost(int &cost, int amount) {
