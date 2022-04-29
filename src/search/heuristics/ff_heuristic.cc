@@ -21,22 +21,21 @@ FFHeuristic::FFHeuristic(const Options &opts)
 }
 
 void FFHeuristic::mark_preferred_operators_and_relaxed_plan(
-    const State &state, PropID goal_id) {
-    Proposition *goal = get_proposition(goal_id);
+    const State &state, relaxation_heuristic::PropositionNode* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
         OpID op_id = goal->reached_by;
         if (op_id != NO_OP) { // We have not yet chained back to a start node.
-            UnaryOperator *unary_op = get_operator(op_id);
+            auto *operator_node = get_operator(op_id);
             bool is_preferred = true;
-            for (PropID precond : get_preconditions(op_id)) {
+            for (auto *precond : get_preconditions(op_id)) {
                 mark_preferred_operators_and_relaxed_plan(
                     state, precond);
-                if (get_proposition(precond)->reached_by != NO_OP) {
+                if (precond->reached_by != NO_OP) {
                     is_preferred = false;
                 }
             }
-            int operator_no = unary_op->operator_no;
+            int operator_no = operator_node->operator_no;
             if (operator_no != -1) {
                 // This is not an axiom.
                 relaxed_plan[operator_no] = true;
@@ -58,7 +57,7 @@ int FFHeuristic::compute_heuristic(const State &ancestor_state) {
 
     // Collecting the relaxed plan also sets the preferred operators.
     for (PropID goal_id : goal_propositions)
-        mark_preferred_operators_and_relaxed_plan(state, goal_id);
+        mark_preferred_operators_and_relaxed_plan(state, get_proposition(goal_id));
 
     int h_ff = 0;
     for (size_t op_no = 0; op_no < relaxed_plan.size(); ++op_no) {

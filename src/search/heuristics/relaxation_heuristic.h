@@ -128,9 +128,10 @@ protected:
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
-//    PropositionNode *get_proposition(PropID prop_id) {
-//        return propositions[prop_id];
-//    }
+    PropositionNode *get_proposition(PropID prop_id) {
+        return propositions[prop_id];
+    }
+
     OperatorNode *get_operator(OpID op_id) {
         return operator_nodes[op_id];
     }
