@@ -11,8 +11,9 @@ using relaxation_heuristic::OpID;
 
 using relaxation_heuristic::NO_OP;
 
-using relaxation_heuristic::Proposition;
-using relaxation_heuristic::UnaryOperator;
+using relaxation_heuristic::GraphNode;
+using relaxation_heuristic::OperatorNode;
+using relaxation_heuristic::PropositionNode;
 
 /*
   TODO: In a better world, this should not derive from
@@ -28,7 +29,7 @@ class FFHeuristic : public additive_heuristic::AdditiveHeuristic {
     using RelaxedPlan = std::vector<bool>;
     RelaxedPlan relaxed_plan;
     void mark_preferred_operators_and_relaxed_plan(
-        const State &state, PropID goal_id);
+        const State &state, PropositionNode *goal);
 protected:
     virtual int compute_heuristic(const State &ancestor_state) override;
 public:
