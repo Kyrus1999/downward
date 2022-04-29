@@ -399,7 +399,7 @@ void RelaxationHeuristic::simplify() {
             removed++;
         }
     }
-    cout << removed << endl;
+    cout << "Removed: " << removed << endl;
 //    unary_operators.erase(
 //            remove_if(
 //                    unary_operators.begin(),
