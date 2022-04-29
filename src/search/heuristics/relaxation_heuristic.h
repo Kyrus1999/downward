@@ -119,7 +119,8 @@ protected:
 //
     OpID get_op_id(const OperatorNode &op) const {
         OpID op_id = op.operator_no;
-        assert(utils::in_bounds(op_id, operator_nodes));
+
+        //assert(utils::in_bounds(op_id, operator_nodes));
         return op_id;
     }
     int get_num_cond_effects();

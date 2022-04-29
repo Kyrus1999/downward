@@ -320,7 +320,6 @@ void RelaxationHeuristic::simplify() {
                 iter->second = value;
         }
     }
-
     /*
       `dominating_key` is conceptually a local variable of `is_dominated`.
       We declare it outside to reduce vector allocation overhead.
@@ -392,6 +391,9 @@ void RelaxationHeuristic::simplify() {
 
     int removed = 0;
     for (OperatorNode *np : operator_nodes) {
+        if (np->operator_no == -1) { //axioms can not be optimized
+            continue;
+        }
         if (is_dominated(*np)) {
             for (PropositionNode* prop : np->preconditions) {
                 prop->precondition_of.erase(std::remove(prop->precondition_of.begin(), prop->precondition_of.end(), np), prop->precondition_of.end());

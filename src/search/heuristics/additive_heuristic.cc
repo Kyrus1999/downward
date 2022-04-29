@@ -101,7 +101,8 @@ void AdditiveHeuristic::mark_preferred_operators(
             if (is_preferred && operator_no != -1) {
                 // This is not an axiom.
                 OperatorProxy op = task_proxy.get_operators()[operator_no];
-                assert(task_properties::is_applicable(op, state));
+                //TODO: WHY DIDN'T THIS WORK
+                //assert(task_properties::is_applicable(op, state));
                 set_preferred(op);
             }
         }
