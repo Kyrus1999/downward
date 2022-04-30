@@ -27,7 +27,7 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
 
     void setup_exploration_queue(const State &state);
     void relaxed_exploration();
-    void mark_preferred_operators(const State &state, PropID goal_id);
+    void mark_preferred_operators(const State &state, PropositionNode* goal);
 
 
 // TODO : add back in

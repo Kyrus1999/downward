@@ -83,8 +83,7 @@ void AdditiveHeuristic::relaxed_exploration() {
 
 
 void AdditiveHeuristic::mark_preferred_operators(
-    const State &state, PropID goal_id) {
-    PropositionNode* goal = propositions[goal_id];
+    const State &state, PropositionNode* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
         OpID op_id = goal->reached_by;
@@ -92,7 +91,7 @@ void AdditiveHeuristic::mark_preferred_operators(
             OperatorNode *operator_node = get_operator(op_id);
             bool is_preferred = true;
             for (auto *precond : get_preconditions(op_id)) {
-                mark_preferred_operators(state, precond->prop_id);
+                mark_preferred_operators(state, precond);
                 if (precond->reached_by != NO_OP) {
                     is_preferred = false;
                 }
@@ -129,7 +128,7 @@ int AdditiveHeuristic::compute_heuristic(const State &ancestor_state) {
     int h = compute_add_and_ff(state);
     if (h != DEAD_END) {
         for (PropID goal_id : goal_propositions)
-            mark_preferred_operators(state, goal_id);
+            mark_preferred_operators(state, get_proposition(goal_id));
     }
     return h;
 }
