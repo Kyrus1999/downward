@@ -22,10 +22,10 @@ GraphNode::GraphNode(std::vector<GraphNode*> &&precondition_of)
 PropositionNode::PropositionNode(PropID prop_id)
     : GraphNode(),
       prop_id(prop_id),
-      reached_by(NO_OP),
+      reached_by(nullptr),
+      num_precondition_occurrences(-1),
       is_goal(false),
-      marked(false),
-      num_precondition_occurrences(-1) {
+      marked(false) {
 }
 
 void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
@@ -34,7 +34,7 @@ void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecess
     assert(op_predecessor->cost >= 0);
     if (cost == -1 || cost > op_predecessor->cost) {
         cost = op_predecessor->cost;
-        reached_by = op_predecessor->operator_no;
+        reached_by = op_predecessor;
         queue.push(cost, this);
     }
     assert(cost != -1 && cost <= op_predecessor->cost);

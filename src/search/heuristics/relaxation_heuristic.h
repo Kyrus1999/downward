@@ -62,12 +62,13 @@ struct OperatorNode : public GraphNode {
 struct PropositionNode: public GraphNode {
     PropID prop_id;
     // TODO: Make sure in constructor that reached_by does not overflow.
-    OpID reached_by : 30;
+    OperatorNode* reached_by;
     /* The following two variables are conceptually bools, but Visual C++ does
        not support packing ints and bools together in a bitfield. */
+    int num_precondition_occurrences : 30;
     unsigned int is_goal : 1;
     unsigned int marked : 1; // used for preferred operators of h^add and h^FF
-    int num_precondition_occurrences;
+
     explicit PropositionNode(PropID prop_id);
     virtual ~PropositionNode() = default;
     //TODO: delete the copy constructor again
