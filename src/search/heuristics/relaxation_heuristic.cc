@@ -401,7 +401,7 @@ void RelaxationHeuristic::simplify() {
             removed++;
         }
     }
-    cout << "Removed: " << removed << endl;
+
 //    unary_operators.erase(
 //            remove_if(
 //                    unary_operators.begin(),
@@ -410,9 +410,9 @@ void RelaxationHeuristic::simplify() {
 //            unary_operators.end());
 
     if (log.is_at_least_normal()) {
-        log << " done! [" << operator_nodes.size() << " unary operators]" << endl;
+        log << " done! [" << operator_nodes.size() << " unary operators, Removed: "  << removed << "]" << endl;
     }
-}
+
 
 RelaxationHeuristic::~RelaxationHeuristic() {
     for (auto ptr: operator_nodes) {
