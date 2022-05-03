@@ -59,7 +59,7 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     for (FactProxy fact : state) {
         PropositionNode* prop = propositions[get_prop_id(fact)];
         prop->cost = 0;
-        prop->reached_by = NO_OP;
+        prop->reached_by = nullptr;
         queue.push(0, prop);
     }
 }
@@ -86,17 +86,16 @@ void AdditiveHeuristic::mark_preferred_operators(
     const State &state, PropositionNode* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
-        OpID op_id = goal->reached_by;
-        if (op_id != NO_OP) { // We have not yet chained back to a start node.
-            OperatorNode *operator_node = get_operator(op_id);
+        OperatorNode* op_id = goal->reached_by;
+        if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
-            for (auto *precond : get_preconditions(op_id)) {
+            for (auto *precond : op_id->preconditions) {
                 mark_preferred_operators(state, precond);
-                if (precond->reached_by != NO_OP) {
+                if (precond->reached_by != nullptr) {
                     is_preferred = false;
                 }
             }
-            int operator_no = operator_node->operator_no;
+            int operator_no = op_id->operator_no;
             if (is_preferred && operator_no != -1) {
                 // This is not an axiom.
                 OperatorProxy op = task_proxy.get_operators()[operator_no];

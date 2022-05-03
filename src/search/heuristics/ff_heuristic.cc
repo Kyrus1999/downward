@@ -24,18 +24,17 @@ void FFHeuristic::mark_preferred_operators_and_relaxed_plan(
     const State &state, relaxation_heuristic::PropositionNode* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
-        OpID op_id = goal->reached_by;
-        if (op_id != NO_OP) { // We have not yet chained back to a start node.
-            auto *operator_node = get_operator(op_id);
+        OperatorNode* op_id = goal->reached_by;
+        if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
-            for (auto *precond : get_preconditions(op_id)) {
+            for (auto *precond : op_id->preconditions) {
                 mark_preferred_operators_and_relaxed_plan(
                     state, precond);
-                if (precond->reached_by != NO_OP) {
+                if (precond->reached_by != nullptr) {
                     is_preferred = false;
                 }
             }
-            int operator_no = operator_node->operator_no;
+            int operator_no = op_id->operator_no;
             if (operator_no != -1) {
                 // This is not an axiom.
                 relaxed_plan[operator_no] = true;
