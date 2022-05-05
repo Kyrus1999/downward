@@ -287,10 +287,10 @@ void RelaxationHeuristic::simplify() {
           enough to test here whether looking up the key of op in the
           map results in an entry including op itself.
         */
-        for (int i = op->precondition_of.size() - 1; i >= 0 ; i--) {
-            if (op != unary_operator_index[make_pair(op->preconditions, op->precondition_of.at(i))].second) {
+        for (GraphNode *effect : op->precondition_of) {
+            if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
                 std::remove(op->precondition_of.begin(), op->precondition_of.end(),
-                            static_cast<GraphNode*>(op));
+                            effect);
                 counter_deleted_effects++;
             }
         }
