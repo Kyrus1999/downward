@@ -114,18 +114,6 @@ bool RelaxationHeuristic::dead_ends_are_reliable() const {
     return !task_properties::has_axioms(task_proxy);
 }
 
-int RelaxationHeuristic::get_num_cond_effects() {
-    int counter = 0;
-    for (OperatorProxy op : task_proxy.get_operators() ){
-        for (EffectProxy effect: op.get_effects()) {
-            EffectConditionsProxy eff_conds = effect.get_conditions();
-
-            if (eff_conds.empty()) counter++;
-        }
-    }
-    return counter;
-}
-
 PropID RelaxationHeuristic::get_prop_id(int var, int value) const {
     return proposition_offsets[var] + value;
 }
@@ -336,8 +324,13 @@ void RelaxationHeuristic::simplify() {
                     Value dominator_value = found->second;
                     int dominator_cost = dominator_value.first;
                     if (dominator_cost <= cost) {
+                        //why is this not executed? (specially the remove part)
+                        #ifndef NDEBUG
+                            unsigned int size_before = op->precondition_of.size() ;
+                        #endif
                         std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
+                        assert(size_before == op->precondition_of.size() );
                     }
                 }
             }
