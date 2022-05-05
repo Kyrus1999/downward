@@ -97,48 +97,17 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
         propositions[prop_id]->is_goal = true;
         goal_propositions.push_back(prop_id);
     }
-
-    // Build unary operators for operators and axioms.
-    //unary_operators.reserve(task_properties::get_num_total_effects(task_proxy));
-
-    //unary_operators.reserve(task_properties::get_num_operators(task_proxy) + get_num_cond_effects());
     for (OperatorProxy op : task_proxy.get_operators())
         build_unary_operators(op);
     for (OperatorProxy axiom : task_proxy.get_axioms())
         build_unary_operators(axiom);
 
-//    for (auto opn: operator_nodes) {
-//        assert(opn->cost == -1);
-//    }
-//    for (PropositionNode* pop: propositions) {
-//        for (auto node: pop->precondition_of){
-//            //cout << node->cost << endl;
-//            assert (node->cost == -1); // Why is this? g is an operator node, therefor should be 0?
-//        }
-//    }
     // Simplify unary operators.
     utils::Timer simplify_timer;
     simplify();
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
-
-    // Not required anymore
-//    // Cross-reference unary operators.
-//    vector<vector<OpID>> precondition_of_vectors(propositions.size());
-//
-//    int num_unary_ops = operator_nodes.size();
-//    for (OpID op_id = 0; op_id < num_unary_ops; ++op_id) {
-//        for (PropID precond : get_preconditions(op_id))
-//            precondition_of_vectors[precond].push_back(op_id);
-//    }
-//
-//    for (PropID prop_id = 0; prop_id < num_propositions; ++prop_id) {
-//        const auto &precondition_of_vec = precondition_of_vectors[prop_id];
-//        propositions[prop_id].precondition_of =
-//            precondition_of_pool.append(precondition_of_vec);
-//        propositions[prop_id].num_precondition_occurences = precondition_of_vec.size();
-//    }
 }
 
 bool RelaxationHeuristic::dead_ends_are_reliable() const {
@@ -157,14 +126,6 @@ int RelaxationHeuristic::get_num_cond_effects() {
     return counter;
 }
 
-//PropositionNode &RelaxationHeuristic::get_prop_node(int var, int value) const {
-//    return &propositions[proposition_offsets[var] + value];
-//}
-
-//PropositionNode* RelaxationHeuristic::get_prop_node(const FactProxy &fact) const {
-//    return get_prop_node(fact.get_variable().get_id(), fact.get_value());
-//}
-
 PropID RelaxationHeuristic::get_prop_id(int var, int value) const {
     return proposition_offsets[var] + value;
 }
@@ -172,19 +133,6 @@ PropID RelaxationHeuristic::get_prop_id(int var, int value) const {
 PropID RelaxationHeuristic::get_prop_id(const FactProxy &fact) const {
     return get_prop_id(fact.get_variable().get_id(), fact.get_value());
 }
-//
-//const Proposition *RelaxationHeuristic::get_proposition(
-//    int var, int value) const {
-//    return &propositions[get_prop_id(var, value)];
-//}
-//
-//Proposition *RelaxationHeuristic::get_proposition(int var, int value) {
-//    return &propositions[get_prop_id(var, value)];
-//}
-//
-//Proposition *RelaxationHeuristic::get_proposition(const FactProxy &fact) {
-//    return get_proposition(fact.get_variable().get_id(), fact.get_value());
-//}
 
 void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     int op_no = op.is_axiom() ? -1 : op.get_id();
@@ -197,9 +145,6 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
 
     utils::sort_unique(precondition_props); // Why?
 
-//    array_pool::ArrayPoolIndex precond_index =
-//            preconditions_pool.append(preconditions_copy);
-//    operator_nodes.emplace_back(preconditions_copy.size(), precond_index);
     OperatorNode* operator_node = new OperatorNode(op.get_cost(),
                                                    precondition_props.size(),
                                                    op_no);
@@ -208,7 +153,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         precondition->precondition_of.push_back(operator_node);
         operator_node->preconditions.push_back(precondition);
     }
-//    operator_node.precondition_of.reserve(op.get_effects().size());
+
     for (EffectProxy effect : op.get_effects()) {
         PropositionNode* effect_prop = propositions[get_prop_id(effect.get_fact())];
         EffectConditionsProxy eff_conds = effect.get_conditions();
@@ -216,14 +161,11 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         if (eff_conds.empty()) {
             operator_node->precondition_of.push_back(effect_prop);
         } else {
-//            array_pool::ArrayPoolIndex effect_preconds_index =
-//                    preconditions_pool.append(effect_preconds);
             vector<PropositionNode*> effect_conditions;
             effect_conditions.reserve(eff_conds.size());
             for (FactProxy eff_cond : eff_conds) {
                 effect_conditions.push_back(propositions[get_prop_id(eff_cond)]);
             }
-            //utils::sort_unique(effect_conditions);
             OperatorNode* conditional_effect = new OperatorNode(0,
                                                                 effect_conditions.size() + 1,
                                                                 op_no);
@@ -418,7 +360,6 @@ void RelaxationHeuristic::simplify() {
     }
 
 #ifndef NDEBUG
-    cout << "HALLO" << endl;
     //Check that there is no operator with no effect
     for (OperatorNode *op: operator_nodes)
         assert(!op->precondition_of.empty());

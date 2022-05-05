@@ -47,14 +47,11 @@ struct OperatorNode : public GraphNode {
     int unsatisfied_preconditions;
     std::vector<PropositionNode*> preconditions;
     OperatorNode* parent_node;
-// preconditions_props(preconditions),
-//    PropID effect;
 
     explicit OperatorNode(int base_cost, int num_preconditions, int operator_no);
     virtual ~OperatorNode() = default;
     //TODO: delete the copy constructor again
-//    OperatorNode(const OperatorNode &) = delete;
-//                          int PropID effect,
+
     void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     std::string myname() override {return "OperatorNode";}
     bool is_proposition() override {return false;}
@@ -86,21 +83,12 @@ class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
     void simplify();
 
-    // proposition_offsets[var_no]: first PropID related to variable var_no
     std::vector<PropID> proposition_offsets;
 protected:
     std::vector<PropositionNode*> propositions;
     std::vector<OperatorNode*> operator_nodes;
     std::vector<PropID> goal_propositions;
 
-//    array_pool::ArrayPool preconditions_pool;
-//    array_pool::ArrayPool precondition_of_pool;
-
-    // HACK!
-//    std::vector<PropID> get_preconditions_vector(OpID op_id) const {
-//        auto view = get_preconditions(op_id);
-//        return std::vector<PropID>(view.begin(), view.end());
-//    }
 
     /*
       TODO: Some of these protected methods are only needed for the
@@ -109,16 +97,6 @@ protected:
     */
 
 
-//    PropID get_prop_id(const Proposition &prop) const {
-//        PropID prop_id = &prop - propositions.data();
-//        assert(utils::in_bounds(prop_id, propositions));
-//        return prop_id;
-//    }
-//
-
-    int get_num_cond_effects();
-//    PropositionNode * get_prop_node(int var, int value) const;
-//    PropositionNode * get_prop_node(const FactProxy &fact) const;
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
@@ -130,9 +108,9 @@ protected:
         return operator_nodes[op_id];
     }
 
-//    const Proposition *get_proposition(int var, int value) const;
+
     int get_proposition_cost(int var, int value) const;
-//    Proposition *get_proposition(const FactProxy &fact);
+
 public:
     explicit RelaxationHeuristic(const options::Options &options);
     virtual bool dead_ends_are_reliable() const override;
