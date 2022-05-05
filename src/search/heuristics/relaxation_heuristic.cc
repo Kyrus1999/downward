@@ -51,7 +51,8 @@ OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no
     : GraphNode(),
       base_cost(base_cost),
       num_preconditions(num_preconditions),
-      operator_no(operator_no) {
+      operator_no(operator_no),
+      parent_node(nullptr) {
 }
 
 
@@ -227,6 +228,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
                                                                 effect_conditions.size() + 1,
                                                                 op_no);
             operator_nodes.push_back(conditional_effect);
+            conditional_effect->parent_node = operator_node;
             for (auto precondition: effect_conditions) {
                 precondition->precondition_of.push_back(conditional_effect);
                 conditional_effect->preconditions.push_back(precondition);
@@ -269,9 +271,8 @@ void RelaxationHeuristic::simplify() {
       This defines a strict partial order.
     */
 #ifndef NDEBUG
-    int num_ops = operator_nodes.size();
-    for (OpID op_id = 0; op_id < num_ops; ++op_id)
-        assert(utils::is_sorted_unique(get_preconditions(op_id)));
+    for (OperatorNode *op: operator_nodes)
+        assert(utils::is_sorted_unique(op->preconditions));
 #endif
 
     const int MAX_PRECONDITIONS_TO_TEST = 5;
@@ -295,29 +296,30 @@ void RelaxationHeuristic::simplify() {
       For each key present in the data, the map stores the dominating
       element in this total order.
     */
-    using Key = pair<vector<PropositionNode*>, vector<GraphNode*>>;
-    using Value = pair<int, OpID>;
+    using Key = pair<vector<PropositionNode *>, GraphNode *>;
+    using Value = pair<int, GraphNode *>;
     using Map = utils::HashMap<Key, Value>;
     Map unary_operator_index;
     unary_operator_index.reserve(operator_nodes.size());
-    for (size_t op_no = 0; op_no < operator_nodes.size(); ++op_no) {
-        const OperatorNode *op = operator_nodes[op_no];
+    for (auto *op: operator_nodes) {
         /*
           Note: we consider operators with more than
           MAX_PRECONDITIONS_TO_TEST preconditions_props here because we can
           still filter out "exact matches" for these, i.e., the first
           test in `is_dominated`.
         */
-        Key key(get_preconditions(op_no), op->precondition_of);
-        Value value(op->base_cost, op_no);
-        auto inserted = unary_operator_index.insert(
-            make_pair(move(key), value));
-        if (!inserted.second) {
-            // We already had an element with this key; check its cost.
-            Map::iterator iter = inserted.first;
-            Value old_value = iter->second;
-            if (value < old_value)
-                iter->second = value;
+        for (GraphNode *effect: op->precondition_of) {
+            Key key(op->preconditions, effect);
+            Value value(op->base_cost, op);
+            auto inserted = unary_operator_index.insert(
+                    make_pair(move(key), value));
+            if (!inserted.second) {
+                // We already had an element with this key; check its cost.
+                Map::iterator iter = inserted.first;
+                Value old_value = iter->second;
+                if (value < old_value)
+                    iter->second = value;
+            }
         }
     }
     /*
@@ -325,93 +327,120 @@ void RelaxationHeuristic::simplify() {
       We declare it outside to reduce vector allocation overhead.
     */
     Key dominating_key;
+
+
+    int counter_deleted_effects = 0;
+    int counter_deleted_nodes = 0;
     /*
       is_dominated: test if a given operator is dominated by an
       operator in the map.
     */
-    auto is_dominated = [&](const OperatorNode &op) {
-            /*
-              Check all possible subsets X of pre(op) to see if there is a
-              dominating operator with preconditions_props X represented in the
-              map.
-            */
+    for (int i = operator_nodes.size()-1; i >= 0; i--) {
+        OperatorNode *op = operator_nodes.at(i);
+        /*
+          Check all possible subsets X of pre(op) to see if there is a
+          dominating operator with preconditions_props X represented in the
+          map.
+        */
 
-            OpID op_id = get_op_id(op);
-            int cost = op.base_cost;
+        int cost = op->base_cost;
+        //const vector<PropositionNode *> precondition = op->preconditions;
 
-            const vector<PropositionNode*> precondition = get_preconditions(op_id);
+        /*
+          We handle the case X = pre(op) specially for efficiency and
+          to ensure that an operator is not considered to be dominated
+          by itself.
 
-            /*
-              We handle the case X = pre(op) specially for efficiency and
-              to ensure that an operator is not considered to be dominated
-              by itself.
-
-              From the discussion above that operators with the same
-              precondition and effect are actually totally ordered, it is
-              enough to test here whether looking up the key of op in the
-              map results in an entry including op itself.
-            */
-            if (unary_operator_index[make_pair(precondition, op.precondition_of)].second != op_id)
-                return true;
-
-            /*
-              We now handle all cases where X is a strict subset of pre(op).
-              Our map lookup ensures conditions 1. and 2., and because X is
-              a strict subset, we also have 4a (which means we don't need 4b).
-              So it only remains to check 3 for all hits.
-            */
-            if (op.num_preconditions > MAX_PRECONDITIONS_TO_TEST) {
-                /*
-                  The runtime of the following code grows exponentially
-                  with the number of preconditions_props.
-                */
-                return false;
+         //TODO: assert no empty operator_nodes anymore
+          From the discussion above that operators with the same
+          precondition and effect are actually totally ordered, it is
+          enough to test here whether looking up the key of op in the
+          map results in an entry including op itself.
+        */
+        for (int i = op->precondition_of.size() - 1; i >= 0 ; i--) {
+            if (op != unary_operator_index[make_pair(op->preconditions, op->precondition_of.at(i))].second) {
+                std::remove(op->precondition_of.begin(), op->precondition_of.end(),
+                            static_cast<GraphNode*>(op));
+                counter_deleted_effects++;
             }
+        }
+        /*
+          We now handle all cases where X is a strict subset of pre(op).
+          Our map lookup ensures conditions 1. and 2., and because X is
+          a strict subset, we also have 4a (which means we don't need 4b).
+          So it only remains to check 3 for all hits.
+        */
+        if (op->num_preconditions > MAX_PRECONDITIONS_TO_TEST) {
+            /*
+              The runtime of the following code grows exponentially
+              with the number of preconditions_props.
+            */
+            continue;
+        }
 
-            vector<PropositionNode*> &dominating_precondition = dominating_key.first;
-            dominating_key.second = op.precondition_of;
+        vector<PropositionNode *> &dominating_precondition = dominating_key.first;
+        for (GraphNode *effect : op->precondition_of) {
+            dominating_key.second = effect;
 
             // We subtract "- 1" to generate all *strict* subsets of precondition.
-            int powerset_size = (1 << precondition.size()) - 1;
+            int powerset_size = (1 << op->preconditions.size()) - 1;
             for (int mask = 0; mask < powerset_size; ++mask) {
                 dominating_precondition.clear();
-                for (size_t i = 0; i < precondition.size(); ++i)
+                for (size_t i = 0; i < op->preconditions.size(); ++i)
                     if (mask & (1 << i))
-                        dominating_precondition.push_back(precondition[i]);
+                        dominating_precondition.push_back(op->preconditions[i]);
                 Map::iterator found = unary_operator_index.find(dominating_key);
                 if (found != unary_operator_index.end()) {
                     Value dominator_value = found->second;
                     int dominator_cost = dominator_value.first;
-                    if (dominator_cost <= cost)
-                        return true;
+                    if (dominator_cost <= cost) {
+                        std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
+                        counter_deleted_effects++;
+                    }
                 }
             }
-            return false;
-        };
-
-    int removed = 0;
-    for (OperatorNode *np : operator_nodes) {
-        if (np->operator_no == -1) { //axioms can not be optimized
-            continue;
         }
-        if (is_dominated(*np)) {
-            for (PropositionNode* prop : np->preconditions) {
-                prop->precondition_of.erase(std::remove(prop->precondition_of.begin(), prop->precondition_of.end(), np), prop->precondition_of.end());
+        // a bit inefficient, since not all precondition propositions for a conditional node contains a link to the conditional node, but to its parent node.
+        //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
+        if (op->precondition_of.size() == 0) {
+            if (op->parent_node) {
+                std::remove(op->parent_node->precondition_of.begin(),
+                            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
             }
-            removed++;
+            for (PropositionNode *precond : op->preconditions) {
+                std::remove(precond->precondition_of.begin(),
+                            precond->precondition_of.end(), static_cast<GraphNode*>(op));
+            }
+            std::remove(operator_nodes.begin(), operator_nodes.end(), op);
+            delete op;
+            counter_deleted_nodes++;
         }
     }
 
-//    unary_operators.erase(
-//            remove_if(
-//                    unary_operators.begin(),
-//                    unary_operators.end(),
-//                    is_dominated),
-//            unary_operators.end());
+#ifndef NDEBUG
+    cout << "HALLO" << endl;
+    //Check that there is no operator with no effect
+    for (OperatorNode *op: operator_nodes)
+        assert(!op->precondition_of.empty());
+    //Check that no deleted node is still in reference
+    std::unordered_set<GraphNode*> pointer_set;
+    for (OperatorNode *op: operator_nodes)
+        pointer_set.insert(op);
+    for (PropositionNode *prop : propositions)
+        for (GraphNode *child : prop->precondition_of)
+            assert(pointer_set.find(child) != pointer_set.end());
 
+    for (PropositionNode *prop : propositions)
+        pointer_set.insert(prop);
+    for (OperatorNode *op : operator_nodes)
+        for (GraphNode *child : op->precondition_of)
+            assert(pointer_set.find(child) != pointer_set.end());
+#endif
     if (log.is_at_least_normal()) {
-        log << " done! [" << operator_nodes.size() << " unary operators, Removed: "  << removed << "]" << endl;
+        log << " done! [" << operator_nodes.size() << " unary operators, Removed Nodes: " << counter_deleted_nodes << ", Removed Effects: " << counter_deleted_effects
+            << "]" << endl;
     }
+}
 
 
 RelaxationHeuristic::~RelaxationHeuristic() {

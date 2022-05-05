@@ -46,6 +46,7 @@ struct OperatorNode : public GraphNode {
     int operator_no; // -1 for axioms; index into the task's operators otherwise
     int unsatisfied_preconditions;
     std::vector<PropositionNode*> preconditions;
+    OperatorNode* parent_node;
 // preconditions_props(preconditions),
 //    PropID effect;
 
@@ -95,10 +96,6 @@ protected:
 //    array_pool::ArrayPool preconditions_pool;
 //    array_pool::ArrayPool precondition_of_pool;
 
-    std::vector<PropositionNode*> get_preconditions(OpID op_id) const {
-        return operator_nodes[op_id]->preconditions;
-    }
-
     // HACK!
 //    std::vector<PropID> get_preconditions_vector(OpID op_id) const {
 //        auto view = get_preconditions(op_id);
@@ -118,12 +115,7 @@ protected:
 //        return prop_id;
 //    }
 //
-    OpID get_op_id(const OperatorNode &op) const {
-        OpID op_id = op.operator_no;
 
-        //assert(utils::in_bounds(op_id, operator_nodes));
-        return op_id;
-    }
     int get_num_cond_effects();
 //    PropositionNode * get_prop_node(int var, int value) const;
 //    PropositionNode * get_prop_node(const FactProxy &fact) const;
