@@ -227,7 +227,7 @@ void RelaxationHeuristic::simplify() {
       element in this total order.
     */
     using Key = pair<vector<PropositionNode *>, GraphNode *>;
-    using Value = pair<int, GraphNode *>;
+    using Value = pair<int, OperatorNode *>;
     using Map = utils::HashMap<Key, Value>;
     Map unary_operator_index;
     unary_operator_index.reserve(operator_nodes.size());
@@ -265,15 +265,27 @@ void RelaxationHeuristic::simplify() {
       is_dominated: test if a given operator is dominated by an
       operator in the map.
     */
-    for (int i = operator_nodes.size()-1; i >= 0; i--) {
-        OperatorNode *op = operator_nodes.at(i);
+    /*
+     Let o, o' be two OperatorNodes and o be a precondition of o'.
+     Then o is placed AFTER o' in the vector operator_nodes.
+     If we iterate in reverse order over operator_nodes, then depending
+     OperatorNodes can be pruned before the nodes on which they depend.
+     Thus, if o' is pruned, we do not need to check again if we o can be pruned
+     now.
+     TODO: add some assert that this is always the case.
+    */
+    for (auto iter_op = operator_nodes.end() - 1;
+         iter_op >= operator_nodes.begin();
+         iter_op--) {
+
+        OperatorNode *op = *iter_op;
+        int cost = op->base_cost;
+
         /*
           Check all possible subsets X of pre(op) to see if there is a
           dominating operator with preconditions_props X represented in the
           map.
         */
-
-        int cost = op->base_cost;
         //const vector<PropositionNode *> precondition = op->preconditions;
 
         /*
@@ -287,10 +299,25 @@ void RelaxationHeuristic::simplify() {
           enough to test here whether looking up the key of op in the
           map results in an entry including op itself.
         */
-        for (GraphNode *effect : op->precondition_of) {
+        // TODO: you iterate over all elements and if one should be deleted, then
+        // out iterated again over all to identify if they are the one to delete
+        // and after the one to delete is found, it countinues to check all other
+        // elements still.
+        // Here a for loop with index would be good and only deleting the effect
+        // at the current index.
+        for (auto iter_effect = op->precondition_of.begin();
+             iter_effect < op->precondition_of.end();
+             iter_effect++) {
+            GraphNode *effect = *iter_effect;
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
-                std::remove(op->precondition_of.begin(), op->precondition_of.end(),
-                            effect);
+                size_t todo_a = op->precondition_of.size();
+                op->precondition_of.erase(iter_effect);
+//                std::remove(op->precondition_of.begin(), op->precondition_of.end(),
+//                            effect);
+                if (todo_a == op->precondition_of.size()){
+                    cerr << "ASDF" << endl;
+                    utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
+                }
                 counter_deleted_effects++;
             }
         }
@@ -309,7 +336,13 @@ void RelaxationHeuristic::simplify() {
         }
 
         vector<PropositionNode *> &dominating_precondition = dominating_key.first;
-        for (GraphNode *effect : op->precondition_of) {
+        //TODO: As before, do a normal iteration with an index variable for more
+        // efficient deletion
+        for (auto iter_effect = op->precondition_of.begin();
+             iter_effect < op->precondition_of.end();
+             iter_effect++) {
+
+            GraphNode *effect = *iter_effect;
             dominating_key.second = effect;
 
             // We subtract "- 1" to generate all *strict* subsets of precondition.
@@ -325,12 +358,14 @@ void RelaxationHeuristic::simplify() {
                     int dominator_cost = dominator_value.first;
                     if (dominator_cost <= cost) {
                         //why is this not executed? (specially the remove part)
-                        #ifndef NDEBUG
-                            unsigned int size_before = op->precondition_of.size() ;
-                        #endif
+                        unsigned int debug_before = op->precondition_of.size() ;
+                        op->precondition_of.erase(iter_effect);
                         std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
-                        assert(size_before == op->precondition_of.size() );
+                        if (debug_before == op->precondition_of.size()) {
+                            cerr << "QWER" << endl;
+                            utils::exit_with(utils::ExitCode::SEARCH_CRITICAL_ERROR);
+                        }
                     }
                 }
             }
@@ -338,15 +373,19 @@ void RelaxationHeuristic::simplify() {
         // a bit inefficient, since not all precondition propositions for a conditional node contains a link to the conditional node, but to its parent node.
         //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
         if (op->precondition_of.size() == 0) {
+            // Patrick: Depending on the implementation, OP could have multiple
+            // 'parents'. As long as we do not create graphs with this feature
+            // we should not implemented it like this, but 'parent' might be a
+            // bad name
             if (op->parent_node) {
                 std::remove(op->parent_node->precondition_of.begin(),
-                            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
+                            op->parent_node->precondition_of.end(), op);
             }
             for (PropositionNode *precond : op->preconditions) {
                 std::remove(precond->precondition_of.begin(),
-                            precond->precondition_of.end(), static_cast<GraphNode*>(op));
+                            precond->precondition_of.end(), op);
             }
-            std::remove(operator_nodes.begin(), operator_nodes.end(), op);
+            operator_nodes.erase(iter_op);
             delete op;
             counter_deleted_nodes++;
         }
@@ -356,7 +395,7 @@ void RelaxationHeuristic::simplify() {
     //Check that there is no operator with no effect
     for (OperatorNode *op: operator_nodes)
         assert(!op->precondition_of.empty());
-    //Check that no deleted node is still in reference
+    //Check that no deleted node is still referenced
     std::unordered_set<GraphNode*> pointer_set;
     for (OperatorNode *op: operator_nodes)
         pointer_set.insert(op);
