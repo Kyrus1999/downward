@@ -289,8 +289,15 @@ void RelaxationHeuristic::simplify() {
         */
         for (GraphNode *effect : op->precondition_of) {
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
-                std::remove(op->precondition_of.begin(), op->precondition_of.end(),
-                            effect);
+                for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
+                    if (op->precondition_of[index] == effect) {
+                        op->precondition_of.erase(op->precondition_of.begin() + index);
+                        break;
+                    }
+                }
+                //std::remove(op->precondition_of.begin(), op->precondition_of.end(),
+                //            effect);
+
                 counter_deleted_effects++;
             }
         }
@@ -328,7 +335,13 @@ void RelaxationHeuristic::simplify() {
                         #ifndef NDEBUG
                             unsigned int size_before = op->precondition_of.size() ;
                         #endif
-                        std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
+                        for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
+                            if (op->precondition_of[index] == effect) {
+                                op->precondition_of.erase(op->precondition_of.begin() + index);
+                                break;
+                            }
+                        }
+                        //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
                         assert(size_before == op->precondition_of.size() );
                     }
@@ -337,19 +350,44 @@ void RelaxationHeuristic::simplify() {
         }
         // a bit inefficient, since not all precondition propositions for a conditional node contains a link to the conditional node, but to its parent node.
         //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
-        if (op->precondition_of.size() == 0) {
+        if (op->precondition_of.empty()) {
             if (op->parent_node) {
-                std::remove(op->parent_node->precondition_of.begin(),
-                            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
+                for (unsigned long index = 0; index < op->parent_node->precondition_of.size(); index++) {
+                    if (op->parent_node->precondition_of[i] == op) {
+                        op->parent_node->precondition_of.erase(op->parent_node->precondition_of.begin() + index);
+                        break;
+                    }
+                    //std::remove(op->parent_node->precondition_of.begin(),
+                    //            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
+                }
             }
             for (PropositionNode *precond : op->preconditions) {
-                std::remove(precond->precondition_of.begin(),
-                            precond->precondition_of.end(), static_cast<GraphNode*>(op));
+                for (unsigned long index = 0; index < precond->precondition_of.size(); index++) {
+                    if (precond->precondition_of[index] == op) {
+                        precond->precondition_of.erase(precond->precondition_of.begin() + index);
+                        break;
+                    }
+                }
+
+                //std::remove(precond->precondition_of.begin(),
+                //            precond->precondition_of.end(), static_cast<GraphNode*>(op));
             }
-            std::remove(operator_nodes.begin(), operator_nodes.end(), op);
+            for (unsigned long index = 0; index < operator_nodes.size(); index++) {
+                if (operator_nodes[index] == op) {
+                    operator_nodes.erase(operator_nodes.begin() + index);
+                    break;
+                }
+            }
+            //std::remove(operator_nodes.begin(), operator_nodes.end(), op);
             delete op;
             counter_deleted_nodes++;
         }
+    }
+
+
+    if (log.is_at_least_normal()) {
+        log << " done! [" << operator_nodes.size() << " unary operators, Removed Nodes: " << counter_deleted_nodes << ", Removed Effects: " << counter_deleted_effects
+            << "]" << endl;
     }
 
 #ifndef NDEBUG
@@ -370,10 +408,6 @@ void RelaxationHeuristic::simplify() {
         for (GraphNode *child : op->precondition_of)
             assert(pointer_set.find(child) != pointer_set.end());
 #endif
-    if (log.is_at_least_normal()) {
-        log << " done! [" << operator_nodes.size() << " unary operators, Removed Nodes: " << counter_deleted_nodes << ", Removed Effects: " << counter_deleted_effects
-            << "]" << endl;
-    }
 }
 
 
