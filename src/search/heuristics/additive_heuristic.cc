@@ -37,6 +37,29 @@ void AdditiveHeuristic::write_overflow_warning() {
     }
 }
 
+inline void AdditiveHeuristic::process_todo() {
+    while(!todo.empty()) {
+        OperatorNode *node = todo.back();
+        todo.pop_back();
+        for (OperatorNode *succ: node->precondition_of_op) {
+            succ->unsatisfied_preconditions--;
+            assert(succ->unsatisfied_preconditions >= 0);
+            succ->cost += node->cost;
+            if (succ->unsatisfied_preconditions <= 0) {
+                todo.push_back(succ);
+            }
+        }
+        for (PropositionNode *succ: node->precondition_of_prop) {
+            assert(succ->prop_id != relaxation_heuristic::NO_PROP);
+            assert(node->cost >= 0);
+            if (succ->cost == -1 || succ->cost > node->cost) {
+                succ->cost = node->cost;
+                succ->reached_by = node;
+                queue.push(succ->cost, succ);
+            }
+        }
+    }
+}
 // heuristic computation
 void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     queue.clear();
@@ -51,9 +74,11 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
         op->unsatisfied_preconditions = op->num_preconditions;
         op->cost = op->base_cost;
         if (op->unsatisfied_preconditions == 0) {
-            op->update_precondition(queue, op);
+            todo.push_back(op);
+//            op->update_precondition(queue, op);
         }
     }
+    process_todo();
 
     for (FactProxy fact : state) {
         PropositionNode* prop = propositions[get_prop_id(fact)];
@@ -65,6 +90,7 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
 
 void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
+    assert(todo.empty());
     while (!queue.empty()) {
         pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
@@ -76,7 +102,16 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
-        prop->update_precondition(queue);
+        for (OperatorNode* succ: prop->precondition_of_op) {
+            succ->unsatisfied_preconditions--;
+            assert(succ->unsatisfied_preconditions >= 0);
+            succ->cost += prop->cost;
+            if (succ->unsatisfied_preconditions <= 0) {
+                todo.push_back(succ);
+            }
+        }
+        process_todo();
+//        prop->update_precondition(queue);
     }
 }
 

@@ -23,6 +23,8 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
      */
     static const int MAX_COST_VALUE = 100000000;
     priority_queues::AdaptiveQueue<PropositionNode*> queue;
+    std::vector<OperatorNode*> todo;
+
     bool did_write_overflow_warning;
 
     void setup_exploration_queue(const State &state);
@@ -43,6 +45,7 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
 
     void write_overflow_warning();
 protected:
+    virtual inline void process_todo();
     virtual int compute_heuristic(const State &ancestor_state) override;
 
     // Common part of h^add and h^ff computation.
@@ -62,6 +65,7 @@ public:
         return get_proposition_cost(var, value);
     }
 };
+
 }
 
 #endif

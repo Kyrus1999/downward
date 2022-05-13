@@ -28,13 +28,17 @@ struct PropositionNode;
 
 using PropQueue = priority_queues::AdaptiveQueue<PropositionNode*>;
 
+struct OperatorNode;
+struct PropositionNode;
+
 struct GraphNode {
     int cost; // Used for h^max cost or h^add cost;
-    std::vector<GraphNode*> precondition_of;
+    std::vector<OperatorNode*> precondition_of_op;
+    std::vector<PropositionNode*> precondition_of_prop;
     explicit GraphNode();
-    explicit GraphNode(std::vector<GraphNode*> &&precondition_of);
+    explicit GraphNode(std::vector<OperatorNode*> &&precondition_of_op, std::vector<PropositionNode*> &&precondition_of_prob);
     virtual ~GraphNode() = default;
-    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
+//    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
     virtual std::string myname() {return "GraphNode";}
     virtual bool is_proposition() = 0;
 };
@@ -52,7 +56,7 @@ struct OperatorNode : public GraphNode {
     virtual ~OperatorNode() = default;
     //TODO: delete the copy constructor again
 
-    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+//    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     std::string myname() override {return "OperatorNode";}
     bool is_proposition() override {return false;}
 };
@@ -71,8 +75,8 @@ struct PropositionNode: public GraphNode {
     virtual ~PropositionNode() = default;
     //TODO: delete the copy constructor again
 //    PropositionNode(const PropositionNode &) = delete;
-    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
-    void update_precondition(PropQueue &queue);
+//    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
+//    void update_precondition(PropQueue &queue);
     std::string myname() override {return "PropositionNode";}
     bool is_proposition() override {return true;}
 };
