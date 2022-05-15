@@ -412,7 +412,7 @@ void RelaxationHeuristic::simplify() {
         if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
             if (op->parent_node) {
                 for (unsigned long index = 0; index < op->parent_node->precondition_of_op.size(); index++) {
-                    if (op->parent_node->precondition_of_op[i] == op) {
+                    if (op->parent_node->precondition_of_op[index] == op) {
                         op->parent_node->precondition_of_op.erase(op->parent_node->precondition_of_op.begin() + index);
                         break;
                     }
