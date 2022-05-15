@@ -314,7 +314,6 @@ void RelaxationHeuristic::simplify() {
             */
             continue;
         }
-
         vector<PropositionNode *> &dominating_precondition = dominating_key.first;
         for (GraphNode *effect : op->precondition_of) {
             dominating_key.second = effect;
@@ -353,7 +352,7 @@ void RelaxationHeuristic::simplify() {
         if (op->precondition_of.empty()) {
             if (op->parent_node) {
                 for (unsigned long index = 0; index < op->parent_node->precondition_of.size(); index++) {
-                    if (op->parent_node->precondition_of[i] == op) {
+                    if (op->parent_node->precondition_of[index] == op) {
                         op->parent_node->precondition_of.erase(op->parent_node->precondition_of.begin() + index);
                         break;
                     }
