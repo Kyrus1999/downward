@@ -32,12 +32,13 @@ void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecess
     auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
     assert(prop_id != relaxation_heuristic::NO_PROP);
     assert(op_predecessor->cost >= 0);
-    if (cost == -1 || cost > op_predecessor->cost) {
-        cost = op_predecessor->cost;
+    int newcost = op_predecessor->cost + op_predecessor->base_cost;
+    if (cost == -1 || cost > newcost ) {
+        cost = newcost;
         reached_by = op_predecessor;
         queue.push(cost, this);
     }
-    assert(cost != -1 && cost <= op_predecessor->cost);
+    assert(cost != -1 && cost <= newcost);
 }
 
 void PropositionNode::update_precondition(PropQueue &queue) {
@@ -56,7 +57,9 @@ OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no
 
 
 void OperatorNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
-    this->unsatisfied_preconditions--;
+    if(this->unsatisfied_preconditions != 0) { //else axioms become negative
+        this->unsatisfied_preconditions--;
+    }
     assert(this->unsatisfied_preconditions >= 0);
     this->cost += predecessor->cost; // TODO: check for overflow
     if (this->unsatisfied_preconditions <= 0) {
@@ -223,7 +226,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
                 effect_conditions.push_back(propositions[get_prop_id(eff_cond)]);
             }
             //utils::sort_unique(effect_conditions);
-            OperatorNode* conditional_effect = new OperatorNode(0,
+            OperatorNode* conditional_effect = new OperatorNode(op.get_cost(),
                                                                 effect_conditions.size() + 1,
                                                                 op_no);
             operator_nodes.push_back(conditional_effect);
