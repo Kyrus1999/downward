@@ -51,7 +51,6 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
         op->unsatisfied_preconditions = op->num_preconditions;
         op->cost = 0;
         if (op->unsatisfied_preconditions == 0) {
-            //cout << "A1" << endl;
             op->update_precondition(queue, op);
         }
     }
