@@ -1,13 +1,9 @@
 #include "relaxation_heuristic.h"
 
 #include "../task_utils/task_properties.h"
-#include "../utils/collections.h"
-#include "../utils/logging.h"
-#include "../utils/timer.h"
 
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <unordered_map>
 #include <vector>
 
@@ -30,14 +26,14 @@ PropositionNode::PropositionNode(PropID prop_id)
 
 void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
     auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
-    assert(prop_id != relaxation_heuristic::NO_PROP);
     assert(op_predecessor->cost >= 0);
-    if (cost == -1 || cost > op_predecessor->cost) {
-        cost = op_predecessor->cost;
+    int newcost = op_predecessor->cost + op_predecessor->base_cost;
+    if (cost == -1 || cost > newcost) {
+        cost = newcost;
         reached_by = op_predecessor;
         queue.push(cost, this);
     }
-    assert(cost != -1 && cost <= op_predecessor->cost);
+    assert(cost != -1 && cost <= newcost);
 }
 
 void PropositionNode::update_precondition(PropQueue &queue) {
@@ -154,7 +150,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             for (FactProxy eff_cond : eff_conds) {
                 effect_conditions.push_back(propositions[get_prop_id(eff_cond)]);
             }
-            OperatorNode* conditional_effect = new OperatorNode(0,
+            OperatorNode* conditional_effect = new OperatorNode(op.get_cost(),
                                                                 effect_conditions.size() + 1,
                                                                 op_no);
             operator_nodes.push_back(conditional_effect);
