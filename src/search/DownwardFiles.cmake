@@ -516,13 +516,13 @@ fast_downward_plugin(
     DEPENDENCY_ONLY
 )
 
-#fast_downward_plugin(
-#    NAME FF_HEURISTIC
-#    HELP "The FF heuristic (an implementation of the RPG heuristic)"
-#    SOURCES
-#        heuristics/ff_heuristic
-#    DEPENDS ADDITIVE_HEURISTIC TASK_PROPERTIES
-#)
+fast_downward_plugin(
+    NAME FF_HEURISTIC
+    HELP "The FF heuristic (an implementation of the RPG heuristic)"
+    SOURCES
+        heuristics/ff_heuristic
+    DEPENDS ADDITIVE_HEURISTIC TASK_PROPERTIES
+)
 
 fast_downward_plugin(
     NAME GOAL_COUNT_HEURISTIC
