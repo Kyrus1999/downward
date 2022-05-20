@@ -4,6 +4,8 @@ import os
 
 import project
 
+import downward.reports as rep
+
 
 REPO = project.get_repo_base()
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS"]
@@ -11,7 +13,7 @@ if project.REMOTE:
     SUITE = project.SUITE_SATISFICING
     ENV = project.BaselSlurmEnvironment(email="cyrill.imahorn@stud.unibas.ch")
 else:
-    SUITE = ["depot:p01.pddl", "grid:prob01.pddl", "gripper:prob01.pddl", "trucks:p12.pddl"]
+    SUITE = ["depot:p01.pddl", "grid:prob01.pddl", "gripper:prob01.pddl",]
     ENV = project.LocalEnvironment(processes=6)
 
 CONFIGS = [
@@ -25,6 +27,7 @@ REVS = [
     ("main", "base"),
     ("version1", "version1"),
     ("version1-simplify", "version1-simplify"),
+    ("patrick3", "iterative"),
 ]
 ATTRIBUTES = [
     "error",
@@ -32,6 +35,7 @@ ATTRIBUTES = [
     "search_start_time",
     "search_start_memory",
     "total_time",
+    "search_time",
     "initial_h_value",
     "h_values",
     "coverage",
@@ -83,4 +87,37 @@ project.add_absolute_report(
 #             name=f"{exp.name}-{algo1}-vs-{algo2}-{attr}{suffix}",
 #         )
 
+class TranslatorDiffReport(rep.PlanningReport):
+    def get_cell(self, run):
+        return ";".join(run.get(attr) for attr in self.attributes)
+
+    def get_text(self):
+        lines = []
+        for runs in self.problem_runs.values():
+            #lhashes = [r.get("translator_output_sas_hash") for r in runs]
+            #hashes = set(lhashes)
+            h_inits = [r.get("initial_h_value") for r in runs]
+            found = False
+            reason = ""
+            for i in range(0, len(h_inits), 2):
+                if h_inits[i] != h_inits[0]:
+                    found = True
+                    reason += str(i) + ", "
+            for i in range(1, len(h_inits), 2):
+                if h_inits[i] != h_inits[1]:
+                    found = True
+                    reason += str(i) + ", "
+            # if None in hashes:
+            #     reason = f"{len([h for h in lhashes if h is None])} failed + "
+            # if len(hashes) > 1:
+            #     reason += f"{len([h for h in lhashes if h is not None])} differ"
+            # if len(reason):
+            #     lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
+            if found:
+                lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
+        return "\n".join(lines)
+
+
+
+exp.add_report(TranslatorDiffReport(attributes=["domain", "problem", "algorithm", "run_dir"]), outfile="different_output_sas.csv")
 exp.run_steps()
