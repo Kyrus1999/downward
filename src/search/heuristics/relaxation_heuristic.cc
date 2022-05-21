@@ -54,7 +54,6 @@ OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no
 
 void OperatorNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
     this->unsatisfied_preconditions--;
-    assert(this->unsatisfied_preconditions >= 0);
     this->cost += predecessor->cost; // TODO: check for overflow
     if (this->unsatisfied_preconditions <= 0) {
         for (auto node : this->precondition_of) {
@@ -338,7 +337,7 @@ void RelaxationHeuristic::simplify() {
                         }
                         //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
-                        assert(size_before == op->precondition_of.size() );
+                        assert(size_before != op->precondition_of.size() );
                     }
                 }
             }

@@ -68,7 +68,7 @@ void AdditiveHeuristic::relaxed_exploration() {
     while (!queue.empty()) {
         pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
-        PropositionNode * prop = top_pair.second;
+        PropositionNode *prop = top_pair.second;
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
