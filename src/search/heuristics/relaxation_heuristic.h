@@ -26,7 +26,7 @@ class RelaxationHeuristic;
 struct PropositionNode;
 
 
-using PropQueue = priority_queues::AdaptiveQueue<PropositionNode*>;
+using PropQueue = priority_queues::BucketQueue<PropositionNode*>;
 
 struct GraphNode {
     int cost; // Used for h^max cost or h^add cost;

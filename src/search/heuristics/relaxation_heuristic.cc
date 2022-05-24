@@ -276,7 +276,6 @@ void RelaxationHeuristic::simplify() {
           to ensure that an operator is not considered to be dominated
           by itself.
 
-         //TODO: assert no empty operator_nodes anymore
           From the discussion above that operators with the same
           precondition and effect are actually totally ordered, it is
           enough to test here whether looking up the key of op in the
