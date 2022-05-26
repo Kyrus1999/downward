@@ -139,7 +139,6 @@ void AdditiveHeuristic::mark_preferred_operators(
             int operator_no = op_id->operator_no;
             if (is_preferred && operator_no != -1) {
                 // This is not an axiom.
-                cout << op_id << flush;
                 OperatorProxy op = task_proxy.get_operators()[operator_no];
                 assert(task_properties::is_applicable(op, state));
                 set_preferred(op);

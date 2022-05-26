@@ -39,16 +39,6 @@ struct GraphNode {
     explicit GraphNode(std::vector<OperatorNode*> &&precondition_of_op, std::vector<PropositionNode*> &&precondition_of_prob);
     virtual ~GraphNode() = default;
 //    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
-
-    array_pool::ArrayPoolIndex<OperatorNode*> precondition_of_op_index;
-    int precondition_of_op_size;
-    array_pool::ArrayPoolIndex<PropositionNode*> precondition_of_prop_index;
-    int precondition_of_prop_size;
-
-    virtual void empty_vectors() {
-        precondition_of_op.resize(0);
-        precondition_of_prop.resize(0);
-    }
 };
 
 
@@ -66,14 +56,7 @@ struct OperatorNode : public GraphNode {
 
 //    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
 
-    array_pool::ArrayPoolIndex<PropositionNode*> precondition_index;
-    int precondition_size;
     Operator* corresponding_op;
-    void empty_vectors() override{
-        precondition_of_op.resize(0);
-        precondition_of_prop.resize(0);
-        preconditions.resize(0);
-    };
 };
 
 struct PropositionNode: public GraphNode {
@@ -111,22 +94,22 @@ struct Proposition {
 static_assert(sizeof(Proposition) == 24, "Proposition has wrong size");
 
 struct Operator {
-    const int base_cost : 8;
-    const int num_preconditions : 8;
-    int operator_no : 8; // -1 for axioms; index into the task's operators otherwise
-    int unsatisfied_preconditions : 8;
+    const int base_cost;
+    const int num_preconditions;
+    int operator_no; // -1 for axioms; index into the task's operators otherwise
+    int unsatisfied_preconditions;
     int cost; // Used for h^max cost or h^add cost;
     array_pool::ArrayPoolIndex<Operator*> precondition_of_op_index;
-    int precondition_of_op_size : 10;
+    int precondition_of_op_size;
     array_pool::ArrayPoolIndex<Proposition*> precondition_of_prop_index;
-    int precondition_of_prop_size : 10;
+    int precondition_of_prop_size;
     array_pool::ArrayPoolIndex<Proposition*> precondition_index;
-    int precondition_size : 12;
+    int precondition_size;
 
     explicit Operator(OperatorNode *);
 };
 
-static_assert(sizeof(Operator) == 32, "Operator has wrong size");
+static_assert(sizeof(Operator) == 44, "Operator has wrong size");
 
 class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
@@ -136,6 +119,7 @@ class RelaxationHeuristic : public Heuristic {
 protected:
     std::vector<PropositionNode*> propositions_nodes;
     std::vector<OperatorNode*> operator_nodes;
+
     std::vector<PropID> goal_propositions;
 
     std::vector<Proposition*> propositions;
