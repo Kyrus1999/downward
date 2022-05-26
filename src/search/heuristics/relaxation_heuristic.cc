@@ -174,7 +174,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             for (FactProxy eff_cond : eff_conds) {
                 effect_conditions.push_back(propositions[get_prop_id(eff_cond)]);
             }
-            OperatorNode* conditional_effect = new OperatorNode(0,
+            OperatorNode* conditional_effect = new OperatorNode(op.get_cost(),
                                                                 effect_conditions.size() + 1,
                                                                 op_no);
             operator_nodes.push_back(conditional_effect);
