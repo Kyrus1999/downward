@@ -21,10 +21,10 @@ FFHeuristic::FFHeuristic(const Options &opts)
 }
 
 void FFHeuristic::mark_preferred_operators_and_relaxed_plan(
-    const State &state, relaxation_heuristic::PropositionNode* goal) {
+    const State &state, relaxation_heuristic::Proposition* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
-        OperatorNode* op_id = goal->reached_by;
+        Operator* op_id = goal->reached_by;
         if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
             for (auto* precond : preconds_pool.get_slice(

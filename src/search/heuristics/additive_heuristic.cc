@@ -39,9 +39,9 @@ void AdditiveHeuristic::write_overflow_warning() {
 
 inline void AdditiveHeuristic::process_todo() {
     while(!todo.empty()) {
-        OperatorNode *node = todo.back();
+        Operator *node = todo.back();
         todo.pop_back();
-        for (OperatorNode* succ : op_precond_of_pool.get_slice(
+        for (Operator* succ : op_precond_of_pool.get_slice(
                 node->precondition_of_op_index, node->precondition_of_op_size)) {
             succ->unsatisfied_preconditions--;
             assert(succ->unsatisfied_preconditions >= 0);
@@ -51,7 +51,7 @@ inline void AdditiveHeuristic::process_todo() {
             }
         }
 
-        for (PropositionNode* succ : prop_precond_of_pool.get_slice(
+        for (Proposition* succ : prop_precond_of_pool.get_slice(
                 node->precondition_of_prop_index, node->precondition_of_prop_size)) {
             assert(succ->prop_id != relaxation_heuristic::NO_PROP);
             assert(node->cost >= 0);
@@ -75,7 +75,7 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     }
 
     // Deal with operators and axioms without preconditions_props.
-    for (auto &op : operator_nodes) {
+    for (auto &op : operators) {
         op->unsatisfied_preconditions = op->num_preconditions;
         op->cost = 0;
         if (op->unsatisfied_preconditions == 0) {
@@ -86,7 +86,7 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     process_todo();
 
     for (FactProxy fact : state) {
-        PropositionNode* prop = propositions[get_prop_id(fact)];
+        Proposition* prop = propositions[get_prop_id(fact)];
         prop->cost = 0;
         prop->reached_by = nullptr;
         queue.push(0, prop);
@@ -97,9 +97,9 @@ void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
     assert(todo.empty());
     while (!queue.empty()) {
-        pair<int, PropositionNode*> top_pair = queue.pop();
+        pair<int, Proposition*> top_pair = queue.pop();
         int distance = top_pair.first;
-        PropositionNode * prop = top_pair.second;
+        Proposition *prop = top_pair.second;
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
@@ -107,7 +107,7 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
-        for (OperatorNode* succ : op_precond_of_pool.get_slice(
+        for (Operator* succ : op_precond_of_pool.get_slice(
                 prop->precondition_of_op_index, prop->precondition_of_op_size)) {
             succ->unsatisfied_preconditions--;
             assert(succ->unsatisfied_preconditions >= 0);
@@ -123,10 +123,10 @@ void AdditiveHeuristic::relaxed_exploration() {
 
 
 void AdditiveHeuristic::mark_preferred_operators(
-    const State &state, PropositionNode* goal) {
+    const State &state, Proposition* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
-        OperatorNode* op_id = goal->reached_by;
+        Operator* op_id = goal->reached_by;
         if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
             for (auto* precond : preconds_pool.get_slice(
@@ -139,6 +139,7 @@ void AdditiveHeuristic::mark_preferred_operators(
             int operator_no = op_id->operator_no;
             if (is_preferred && operator_no != -1) {
                 // This is not an axiom.
+                cout << op_id << flush;
                 OperatorProxy op = task_proxy.get_operators()[operator_no];
                 assert(task_properties::is_applicable(op, state));
                 set_preferred(op);
@@ -153,7 +154,7 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 
     int total_cost = 0;
     for (PropID goal_id : goal_propositions) {
-        const PropositionNode *goal = propositions[goal_id];
+        const Proposition *goal = propositions[goal_id];
         int goal_cost = goal->cost;
         if (goal_cost == -1)
             return DEAD_END;

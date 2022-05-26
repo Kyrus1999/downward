@@ -25,12 +25,12 @@ const PropID NO_PROP= -1;
 class RelaxationHeuristic;
 struct PropositionNode;
 
-
 using PropQueue = priority_queues::BucketQueue<PropositionNode*>;
 
 struct OperatorNode;
 struct PropositionNode;
-
+struct Operator;
+struct Proposition;
 struct GraphNode {
     int cost; // Used for h^max cost or h^add cost;
     std::vector<OperatorNode*> precondition_of_op;
@@ -39,8 +39,6 @@ struct GraphNode {
     explicit GraphNode(std::vector<OperatorNode*> &&precondition_of_op, std::vector<PropositionNode*> &&precondition_of_prob);
     virtual ~GraphNode() = default;
 //    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
-    virtual std::string myname() {return "GraphNode";}
-    virtual bool is_proposition() = 0;
 
     array_pool::ArrayPoolIndex<OperatorNode*> precondition_of_op_index;
     int precondition_of_op_size;
@@ -67,12 +65,10 @@ struct OperatorNode : public GraphNode {
     //TODO: delete the copy constructor again
 
 //    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
-    std::string myname() override {return "OperatorNode";}
-    bool is_proposition() override {return false;}
 
     array_pool::ArrayPoolIndex<PropositionNode*> precondition_index;
     int precondition_size;
-
+    Operator* corresponding_op;
     void empty_vectors() override{
         precondition_of_op.resize(0);
         precondition_of_prop.resize(0);
@@ -89,18 +85,48 @@ struct PropositionNode: public GraphNode {
     int num_precondition_occurrences : 30;
     unsigned int is_goal : 1;
     unsigned int marked : 1; // used for preferred operators of h^add and h^FF
-
+    Proposition* corresponding_prop;
     explicit PropositionNode(PropID prop_id);
     virtual ~PropositionNode() = default;
     //TODO: delete the copy constructor again
 //    PropositionNode(const PropositionNode &) = delete;
 //    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
 //    void update_precondition(PropQueue &queue);
-    std::string myname() override {return "PropositionNode";}
-    bool is_proposition() override {return true;}
 };
 
 //static_assert(sizeof(GraphNode) == 28, "GraphNode has wrong size");
+
+struct Proposition {
+    int cost; // Used for h^max cost or h^add cost;
+    PropID prop_id;
+    // TODO: Make sure in constructor that reached_by does not overflow.
+    Operator* reached_by;
+    array_pool::ArrayPoolIndex<Operator*> precondition_of_op_index;
+    int precondition_of_op_size : 30;
+    unsigned int is_goal : 1;
+    unsigned int marked : 1;
+    explicit Proposition(PropositionNode *);
+};
+
+static_assert(sizeof(Proposition) == 24, "Proposition has wrong size");
+
+struct Operator {
+    const int base_cost : 8;
+    const int num_preconditions : 8;
+    int operator_no : 8; // -1 for axioms; index into the task's operators otherwise
+    int unsatisfied_preconditions : 8;
+    int cost; // Used for h^max cost or h^add cost;
+    array_pool::ArrayPoolIndex<Operator*> precondition_of_op_index;
+    int precondition_of_op_size : 10;
+    array_pool::ArrayPoolIndex<Proposition*> precondition_of_prop_index;
+    int precondition_of_prop_size : 10;
+    array_pool::ArrayPoolIndex<Proposition*> precondition_index;
+    int precondition_size : 12;
+
+    explicit Operator(OperatorNode *);
+};
+
+static_assert(sizeof(Operator) == 32, "Operator has wrong size");
 
 class RelaxationHeuristic : public Heuristic {
     void build_unary_operators(const OperatorProxy &op);
@@ -108,13 +134,16 @@ class RelaxationHeuristic : public Heuristic {
 
     std::vector<PropID> proposition_offsets;
 protected:
-    std::vector<PropositionNode*> propositions;
+    std::vector<PropositionNode*> propositions_nodes;
     std::vector<OperatorNode*> operator_nodes;
     std::vector<PropID> goal_propositions;
 
-    array_pool::ArrayPool<PropositionNode*> prop_precond_of_pool;
-    array_pool::ArrayPool<OperatorNode*> op_precond_of_pool;
-    array_pool::ArrayPool<PropositionNode*> preconds_pool;
+    std::vector<Proposition*> propositions;
+    std::vector<Operator*> operators;
+
+    array_pool::ArrayPool<Proposition*> prop_precond_of_pool;
+    array_pool::ArrayPool<Operator*> op_precond_of_pool;
+    array_pool::ArrayPool<Proposition*> preconds_pool;
 
 
     /*
@@ -127,12 +156,12 @@ protected:
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
-    PropositionNode *get_proposition(PropID prop_id) {
+    Proposition *get_proposition(PropID prop_id) {
         return propositions[prop_id];
     }
 
-    OperatorNode *get_operator(OpID op_id) {
-        return operator_nodes[op_id];
+    Operator *get_operator(OpID op_id) {
+        return operators[op_id];
     }
 
 
