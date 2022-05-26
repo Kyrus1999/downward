@@ -41,6 +41,16 @@ struct GraphNode {
 //    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
     virtual std::string myname() {return "GraphNode";}
     virtual bool is_proposition() = 0;
+
+    array_pool::ArrayPoolIndex<OperatorNode*> precondition_of_op_index;
+    int precondition_of_op_size;
+    array_pool::ArrayPoolIndex<PropositionNode*> precondition_of_prop_index;
+    int precondition_of_prop_size;
+
+    virtual void empty_vectors() {
+        precondition_of_op.resize(0);
+        precondition_of_prop.resize(0);
+    }
 };
 
 
@@ -59,6 +69,15 @@ struct OperatorNode : public GraphNode {
 //    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
     std::string myname() override {return "OperatorNode";}
     bool is_proposition() override {return false;}
+
+    array_pool::ArrayPoolIndex<PropositionNode*> precondition_index;
+    int precondition_size;
+
+    void empty_vectors() override{
+        precondition_of_op.resize(0);
+        precondition_of_prop.resize(0);
+        preconditions.resize(0);
+    };
 };
 
 struct PropositionNode: public GraphNode {
@@ -92,6 +111,10 @@ protected:
     std::vector<PropositionNode*> propositions;
     std::vector<OperatorNode*> operator_nodes;
     std::vector<PropID> goal_propositions;
+
+    array_pool::ArrayPool<PropositionNode*> prop_precond_of_pool;
+    array_pool::ArrayPool<OperatorNode*> op_precond_of_pool;
+    array_pool::ArrayPool<PropositionNode*> preconds_pool;
 
 
     /*

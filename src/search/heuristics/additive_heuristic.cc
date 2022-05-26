@@ -41,7 +41,8 @@ inline void AdditiveHeuristic::process_todo() {
     while(!todo.empty()) {
         OperatorNode *node = todo.back();
         todo.pop_back();
-        for (OperatorNode *succ: node->precondition_of_op) {
+        for (OperatorNode* succ : op_precond_of_pool.get_slice(
+                node->precondition_of_op_index, node->precondition_of_op_size)) {
             succ->unsatisfied_preconditions--;
             assert(succ->unsatisfied_preconditions >= 0);
             succ->cost += node->cost;
@@ -49,13 +50,16 @@ inline void AdditiveHeuristic::process_todo() {
                 todo.push_back(succ);
             }
         }
-        for (PropositionNode *succ: node->precondition_of_prop) {
+
+        for (PropositionNode* succ : prop_precond_of_pool.get_slice(
+                node->precondition_of_prop_index, node->precondition_of_prop_size)) {
             assert(succ->prop_id != relaxation_heuristic::NO_PROP);
             assert(node->cost >= 0);
-            if (succ->cost == -1 || succ->cost > node->cost) {
-                succ->cost = node->cost;
+            int newcost = node->cost + node->base_cost;
+            if (succ->cost == -1 || succ->cost > newcost) {
+                succ->cost = newcost;
                 succ->reached_by = node;
-                queue.push(succ->cost, succ);
+                queue.push(newcost, succ);
             }
         }
     }
@@ -67,12 +71,13 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     for (auto &prop : propositions) {
         prop->cost = -1;
         prop->marked = false;
+        prop->reached_by = nullptr;
     }
 
     // Deal with operators and axioms without preconditions_props.
     for (auto &op : operator_nodes) {
         op->unsatisfied_preconditions = op->num_preconditions;
-        op->cost = op->base_cost;
+        op->cost = 0;
         if (op->unsatisfied_preconditions == 0) {
             todo.push_back(op);
 //            op->update_precondition(queue, op);
@@ -102,7 +107,8 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
-        for (OperatorNode* succ: prop->precondition_of_op) {
+        for (OperatorNode* succ : op_precond_of_pool.get_slice(
+                prop->precondition_of_op_index, prop->precondition_of_op_size)) {
             succ->unsatisfied_preconditions--;
             assert(succ->unsatisfied_preconditions >= 0);
             succ->cost += prop->cost;
@@ -123,7 +129,8 @@ void AdditiveHeuristic::mark_preferred_operators(
         OperatorNode* op_id = goal->reached_by;
         if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
-            for (auto *precond : op_id->preconditions) {
+            for (auto* precond : preconds_pool.get_slice(
+                    op_id->precondition_index, op_id->precondition_size)) {
                 mark_preferred_operators(state, precond);
                 if (precond->reached_by != nullptr) {
                     is_preferred = false;

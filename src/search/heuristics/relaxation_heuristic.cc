@@ -110,6 +110,24 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
+
+    for (PropositionNode *prop : propositions) {
+        prop->precondition_of_op_index = op_precond_of_pool.append(prop->precondition_of_op);
+        prop->precondition_of_op_size = prop->precondition_of_op.size();
+        prop->empty_vectors();
+    }
+
+    for (OperatorNode *op : operator_nodes) {
+        op->precondition_of_op_index = op_precond_of_pool.append(op->precondition_of_op);
+        op->precondition_of_op_size = op->precondition_of_op.size();
+        op->precondition_of_prop_index = prop_precond_of_pool.append(op->precondition_of_prop);
+        op->precondition_of_prop_size = op->precondition_of_prop.size();
+        op->precondition_index = preconds_pool.append(op->preconditions);
+        op->precondition_size = op->preconditions.size();
+        op->empty_vectors();
+    }
+
+
 }
 
 bool RelaxationHeuristic::dead_ends_are_reliable() const {
