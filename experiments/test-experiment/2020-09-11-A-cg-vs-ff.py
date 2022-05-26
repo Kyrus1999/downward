@@ -22,7 +22,7 @@ CONFIGS = [
 ]
 
 BUILD_OPTIONS = []
-DRIVER_OPTIONS = ["--overall-time-limit", "30m"]
+DRIVER_OPTIONS = ["--keep-sas", "--overall-time-limit", "30m"]
 REVS = [
     ("main", "base"),
     ("version1", "version1"),
