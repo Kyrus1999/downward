@@ -123,19 +123,20 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
-
+    // Generate all Propositions and bind them to corresponding node
     for (PropositionNode *prop_node : propositions_nodes) {
         auto *prop = new Proposition(prop_node);
         propositions.push_back(prop);
         prop_node->corresponding_prop = prop;
     }
-
+    // Generate all Operators and bind them to corresponding node
     for (OperatorNode *op_node : operator_nodes) {
         auto *op = new Operator(op_node);
         operators.push_back(op);
         op_node->corresponding_op = op;
     }
 
+    // Fill the pool with correct pointers
     for (PropositionNode *prop_node : propositions_nodes) {
         auto *prop = prop_node->corresponding_prop;
         std::vector<Operator*> temp;
@@ -171,7 +172,13 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
         op->precondition_size = temp3.size();
     }
 
-
+    // Delete all nodes
+    for (auto ptr: operator_nodes) {
+        delete ptr;
+    }
+    for (auto ptr: propositions_nodes) {
+        delete ptr;
+    }
 }
 
 bool RelaxationHeuristic::dead_ends_are_reliable() const {
@@ -538,12 +545,6 @@ void RelaxationHeuristic::simplify() {
 
 
 RelaxationHeuristic::~RelaxationHeuristic() {
-    for (auto ptr: operator_nodes) {
-        delete ptr;
-    }
-    for (auto ptr: propositions_nodes) {
-        delete ptr;
-    }
     for (auto ptr: operators) {
         delete ptr;
     }
