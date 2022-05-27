@@ -18,16 +18,18 @@ else:
 
 CONFIGS = [
     ("add", ["--search", f"eager_greedy([add()])"]),
-    ("ff", ["--search", f"eager_greedy([ff()])"]),
+    # ("ff", ["--search", f"eager_greedy([ff()])"]),
 ]
 
 BUILD_OPTIONS = []
-DRIVER_OPTIONS = ["--keep-sas", "--overall-time-limit", "30m"]
+DRIVER_OPTIONS = ["--overall-time-limit", "30m"]
 REVS = [
     ("main", "base"),
     ("version1", "version1"),
     ("version1-simplify", "version1-simplify"),
-    ("patrick3", "iterative"),
+    ("patrick3", "iter"),
+    ("iter_test", "iter_ap"),
+    ("iter_test_2", "iter_ap_reduced")
 ]
 ATTRIBUTES = [
     "error",
@@ -99,14 +101,17 @@ class TranslatorDiffReport(rep.PlanningReport):
             h_inits = [r.get("initial_h_value") for r in runs]
             found = False
             reason = ""
-            for i in range(0, len(h_inits), 2):
+            for i in range(0, len(h_inits), 1):
                 if h_inits[i] != h_inits[0]:
                     found = True
                     reason += str(i) + ", "
-            for i in range(1, len(h_inits), 2):
-                if h_inits[i] != h_inits[1]:
-                    found = True
-                    reason += str(i) + ", "
+
+            #for i in range(1, len(h_inits), 2):
+            #    if h_inits[i] != h_inits[1]:
+            #        found = True
+            #        reason += str(i) + ", "
+
+
             # if None in hashes:
             #     reason = f"{len([h for h in lhashes if h is None])} failed + "
             # if len(hashes) > 1:
