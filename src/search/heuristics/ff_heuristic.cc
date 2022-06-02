@@ -61,11 +61,15 @@ int FFHeuristic::compute_heuristic(const State &ancestor_state) {
 
     int h_ff = 0;
     for (size_t op_no = 0; op_no < relaxed_plan.size(); ++op_no) {
+        //cout << op_no << " " << relaxed_plan[op_no] << endl;
         if (relaxed_plan[op_no]) {
             relaxed_plan[op_no] = false; // Clean up for next computation.
             h_ff += task_proxy.get_operators()[op_no].get_cost();
         }
     }
+    //cout << h_add << endl;
+    //cout << h_ff << endl;
+    //utils::exit_with(utils::ExitCode::SEARCH_UNSUPPORTED);
     return h_ff;
 }
 
