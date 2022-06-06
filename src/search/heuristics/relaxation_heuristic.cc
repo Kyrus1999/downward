@@ -126,7 +126,12 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     for (FactProxy precondition : preconditions) {
         precondition_props.push_back(get_prop_id(precondition));
     }
+    vector<EffectProxy> with_condition;
     for (EffectProxy effect : op.get_effects()) {
+        if (effect.get_conditions().size() > 0) {
+            with_condition.push_back(effect);
+            continue;
+        }
         PropID effect_prop = get_prop_id(effect.get_fact());
         EffectConditionsProxy eff_conds = effect.get_conditions();
         precondition_props.reserve(preconditions.size() + eff_conds.size());
@@ -142,6 +147,24 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         unary_operators.emplace_back(
             preconditions_copy.size(), precond_index, effect_prop,
             op_no, base_cost);
+        precondition_props.erase(precondition_props.end() - eff_conds.size(), precondition_props.end());
+    }
+    for (EffectProxy effect : with_condition) {
+        PropID effect_prop = get_prop_id(effect.get_fact());
+        EffectConditionsProxy eff_conds = effect.get_conditions();
+        precondition_props.reserve(preconditions.size() + eff_conds.size());
+        for (FactProxy eff_cond : eff_conds) {
+            precondition_props.push_back(get_prop_id(eff_cond));
+        }
+
+        // The sort-unique can eventually go away. See issue497.
+        vector<PropID> preconditions_copy(precondition_props);
+        utils::sort_unique(preconditions_copy);
+        array_pool::ArrayPoolIndex precond_index =
+                preconditions_pool.append(preconditions_copy);
+        unary_operators.emplace_back(
+                preconditions_copy.size(), precond_index, effect_prop,
+                op_no, base_cost);
         precondition_props.erase(precondition_props.end() - eff_conds.size(), precondition_props.end());
     }
 }
