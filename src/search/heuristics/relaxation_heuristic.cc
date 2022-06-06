@@ -126,7 +126,8 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         precondition_props.push_back(propositions[get_prop_id(precondition)]);
     }
 
-    utils::sort_unique(precondition_props); // Why?
+    //utils::sort_unique(precondition_props);
+    sort_vector_by_propid(precondition_props);
 
     OperatorNode* operator_node = new OperatorNode(op.get_cost(),
                                                    precondition_props.size(),
@@ -161,12 +162,30 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             for (auto precondition: precondition_props) {
                 conditional_effect->preconditions.push_back(precondition);
             }
-            utils::sort_unique(conditional_effect->preconditions);
+            //utils::sort_unique(conditional_effect->preconditions);
+            sort_vector_by_propid(conditional_effect->preconditions);
             operator_node->precondition_of.push_back(conditional_effect);
             conditional_effect->precondition_of.push_back(effect_prop);
         }
 
     }
+}
+
+void RelaxationHeuristic::sort_vector_by_propid(std::vector<PropositionNode*> &vector) {
+    std::vector<PropID> id_vector;
+    id_vector.reserve(vector.size());
+    for (PropositionNode *p : vector) {
+        id_vector.push_back(p->prop_id);
+    }
+    std::vector<PropID> sorted_id_vector(id_vector);
+    utils::sort_unique(sorted_id_vector);
+    std::vector<PropositionNode*> temp;
+    for (PropID prop_id : sorted_id_vector) {
+        auto iter = std::find(id_vector.begin(), id_vector.end(), prop_id);
+        assert(iter != id_vector.end());
+        temp.push_back(vector[iter - id_vector.begin()]);
+    }
+    vector.swap(temp);
 }
 
 
