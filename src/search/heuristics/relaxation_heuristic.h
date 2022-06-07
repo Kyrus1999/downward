@@ -85,7 +85,8 @@ class RelaxationHeuristic : public Heuristic {
 
     std::vector<PropID> proposition_offsets;
 
-    void sort_vector_by_propid(std::vector<PropositionNode*> &vector);
+    static void sort_vector_by_propid(std::vector<PropositionNode*> &vector);
+    static bool is_sorted_by_propid(std::vector<PropositionNode*> &vector);
 
 protected:
     std::vector<PropositionNode*> propositions;

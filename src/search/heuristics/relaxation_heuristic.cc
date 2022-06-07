@@ -188,6 +188,15 @@ void RelaxationHeuristic::sort_vector_by_propid(std::vector<PropositionNode*> &v
     vector.swap(temp);
 }
 
+bool RelaxationHeuristic::is_sorted_by_propid(std::vector<PropositionNode *> &vector) {
+    std::vector<PropID> id_vector;
+    id_vector.reserve(vector.size());
+    for (PropositionNode *p : vector) {
+        id_vector.push_back(p->prop_id);
+    }
+    return utils::is_sorted_unique(id_vector);
+}
+
 
 int RelaxationHeuristic::get_proposition_cost(int var, int value) const {
     PropID prop_id = get_prop_id(var, value);
@@ -216,7 +225,7 @@ void RelaxationHeuristic::simplify() {
     */
 #ifndef NDEBUG
     for (OperatorNode *op: operator_nodes)
-        assert(utils::is_sorted_unique(op->preconditions));
+        assert(is_sorted_by_propid(op->preconditions));
 #endif
 
     const int MAX_PRECONDITIONS_TO_TEST = 5;
@@ -320,7 +329,7 @@ void RelaxationHeuristic::simplify() {
           a strict subset, we also have 4a (which means we don't need 4b).
           So it only remains to check 3 for all hits.
         */
-        if (op->num_preconditions > MAX_PRECONDITIONS_TO_TEST) {
+        if (op->num_preconditions > MAX_PRECONDITIONS_TO_TEST && !op->precondition_of.empty()) {
             /*
               The runtime of the following code grows exponentially
               with the number of preconditions_props.
@@ -356,6 +365,7 @@ void RelaxationHeuristic::simplify() {
                         //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
                         assert(size_before != op->precondition_of.size() );
+                        break;
                     }
                 }
             }
