@@ -137,7 +137,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         precondition->precondition_of.push_back(operator_node);
         operator_node->preconditions.push_back(precondition);
     }
-
+    vector<OperatorNode*> temp;
     for (EffectProxy effect : op.get_effects()) {
         PropositionNode* effect_prop = propositions[get_prop_id(effect.get_fact())];
         EffectConditionsProxy eff_conds = effect.get_conditions();
@@ -164,10 +164,14 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             }
             //utils::sort_unique(conditional_effect->preconditions);
             sort_vector_by_propid(conditional_effect->preconditions);
-            operator_node->precondition_of.push_back(conditional_effect);
+            //operator_node->precondition_of.push_back(conditional_effect);
+            temp.push_back(conditional_effect);
             conditional_effect->precondition_of.push_back(effect_prop);
         }
 
+    }
+    for (OperatorNode* t : temp) {
+        operator_node->precondition_of.push_back(t);
     }
 }
 
