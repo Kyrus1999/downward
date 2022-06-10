@@ -69,6 +69,7 @@ int FFHeuristic::compute_heuristic(const State &ancestor_state) {
     }
     cout << "h_add: " << h_add << endl;
     cout << "h_ff : " << h_ff  << endl;
+    utils::exit_with(utils::ExitCode::SEARCH_UNSUPPORTED);
     return h_ff;
 }
 
