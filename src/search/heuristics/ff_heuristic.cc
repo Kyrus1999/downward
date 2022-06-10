@@ -65,6 +65,9 @@ int FFHeuristic::compute_heuristic(const State &ancestor_state) {
             h_ff += task_proxy.get_operators()[op_no].get_cost();
         }
     }
+    cout << "h_add: " << h_add << endl;
+    cout << "h_ff : " << h_ff  << endl;
+    utils::exit_with(utils::ExitCode::SEARCH_UNSUPPORTED);
     return h_ff;
 }
 
