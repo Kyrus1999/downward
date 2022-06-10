@@ -41,7 +41,7 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
         assert(cost >= 0);
         Proposition *prop = get_proposition(prop_id);
         if (prop->cost == -1 || prop->cost > cost) {
-            printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", std::to_string(op_id).c_str() , "PropID", std::to_string(prop_id).c_str(), "Cost", std::to_string(cost).c_str() );
+            printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", std::to_string(get_operator(op_id)->operator_no).c_str() , "PropID", std::to_string(prop_id).c_str(), "Cost", std::to_string(cost).c_str() );
             prop->cost = cost;
             prop->reached_by = op_id;
             queue.push(cost, prop_id);
