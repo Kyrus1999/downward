@@ -28,7 +28,10 @@ void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecess
     auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
     assert(op_predecessor->cost >= 0);
     int newcost = op_predecessor->cost + op_predecessor->base_cost;
+    string s1 = to_string(op_predecessor->operator_no);
+    string s2 = to_string(this->prop_id);
     if (cost == -1 || cost > newcost) {
+        printf("%5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str() );
         cost = newcost;
         reached_by = op_predecessor;
         queue.push(cost, this);
