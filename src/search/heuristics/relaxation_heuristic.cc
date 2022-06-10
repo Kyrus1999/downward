@@ -31,7 +31,7 @@ void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecess
     string s1 = to_string(op_predecessor->operator_no);
     string s2 = to_string(this->prop_id);
     if (cost == -1 || cost > newcost) {
-        printf("%5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str() );
+        printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str(), "Cost", to_string(newcost).c_str() );
         cost = newcost;
         reached_by = op_predecessor;
         queue.push(cost, this);
