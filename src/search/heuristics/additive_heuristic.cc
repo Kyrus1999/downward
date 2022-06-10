@@ -60,7 +60,7 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
         prop->cost = 0;
         prop->reached_by = nullptr;
         queue.push(0, prop);
-        string s1 = to_string(-1);
+        string s1 = to_string(0);
         string s2 = to_string(prop->prop_id);
         printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str(), "Cost", to_string(0).c_str() );
     }
