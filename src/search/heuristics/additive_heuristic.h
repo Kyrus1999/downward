@@ -23,7 +23,7 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
      */
     static const int MAX_COST_VALUE = 100000000;
     priority_queues::BucketQueue<Proposition*> queue;
-    std::vector<Operator*> todo;
+    std::queue<Operator*> todo;
 
     bool did_write_overflow_warning;
 

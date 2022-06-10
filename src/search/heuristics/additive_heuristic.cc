@@ -39,18 +39,8 @@ void AdditiveHeuristic::write_overflow_warning() {
 
 inline void AdditiveHeuristic::process_todo() {
     while(!todo.empty()) {
-        Operator *node = todo.back();
-        todo.pop_back();
-        for (Operator* succ : op_precond_of_pool.get_slice(
-                node->precondition_of_op_index, node->precondition_of_op_size)) {
-            succ->unsatisfied_preconditions--;
-            assert(succ->unsatisfied_preconditions >= 0);
-            succ->cost += node->cost;
-            if (succ->unsatisfied_preconditions <= 0) {
-                todo.push_back(succ);
-            }
-        }
-
+        Operator *node = todo.front();
+        todo.pop();
         for (Proposition* succ : prop_precond_of_pool.get_slice(
                 node->precondition_of_prop_index, node->precondition_of_prop_size)) {
             assert(succ->prop_id != relaxation_heuristic::NO_PROP);
@@ -60,6 +50,16 @@ inline void AdditiveHeuristic::process_todo() {
                 succ->cost = newcost;
                 succ->reached_by = node;
                 queue.push(newcost, succ);
+            }
+        }
+
+        for (Operator* succ : op_precond_of_pool.get_slice(
+                node->precondition_of_op_index, node->precondition_of_op_size)) {
+            succ->unsatisfied_preconditions--;
+            assert(succ->unsatisfied_preconditions >= 0);
+            succ->cost += node->cost;
+            if (succ->unsatisfied_preconditions <= 0) {
+                todo.push(succ);
             }
         }
     }
