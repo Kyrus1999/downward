@@ -72,6 +72,7 @@ void AdditiveHeuristic::relaxed_exploration() {
         pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
         PropositionNode *prop = top_pair.second;
+        printf("%5s: %7s\n", "PropID", to_string(prop->prop_id).c_str());
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
