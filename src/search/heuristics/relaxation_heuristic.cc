@@ -336,7 +336,7 @@ void RelaxationHeuristic::simplify() {
           a strict subset, we also have 4a (which means we don't need 4b).
           So it only remains to check 3 for all hits.
         */
-        if (op->num_preconditions > MAX_PRECONDITIONS_TO_TEST && !op->precondition_of.empty()) {
+        if (op->preconditions.size() > MAX_PRECONDITIONS_TO_TEST && !op->precondition_of.empty()) {
             /*
               The runtime of the following code grows exponentially
               with the number of preconditions_props.
