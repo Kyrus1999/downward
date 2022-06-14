@@ -40,7 +40,6 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     void enqueue_if_necessary(PropID prop_id, int cost, OpID op_id) {
         assert(cost >= 0);
         Proposition *prop = get_proposition(prop_id);
-        printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", std::to_string(get_operator(op_id)->operator_no).c_str() , "PropID", std::to_string(prop_id).c_str(), "Cost", std::to_string(cost).c_str() );
         if (prop->cost == -1 || prop->cost > cost) {
             prop->cost = cost;
             prop->reached_by = op_id;
