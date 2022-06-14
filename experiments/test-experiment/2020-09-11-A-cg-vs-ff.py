@@ -17,19 +17,19 @@ else:
     ENV = project.LocalEnvironment(processes=6)
 
 CONFIGS = [
-    ("add", ["--search", f"eager_greedy([add()])"]),
-    # ("ff", ["--search", f"eager_greedy([ff()])"]),
+    #("add", ["--search", f"eager_greedy([add()])"]),
+    ("ff", ["--search", f"eager_greedy([ff()])"]),
 ]
 
-BUILD_OPTIONS = []
-DRIVER_OPTIONS = ["--overall-time-limit", "30m", "--build", "debug"]
+BUILD_OPTIONS = ["--debug"]
+DRIVER_OPTIONS = ["--overall-time-limit", "30m", "--debug"]
 REVS = [
     ("main", "base"),
-    ("version1", "version1"),
+    #("version1", "version1"),
     ("version1-simplify", "version1-simplify"),
-    ("patrick3", "iter"),
-    ("iter_test", "iter_ap"),
-    ("iter_test_2", "iter_ap_reduced")
+    #("patrick3", "iter"),
+    #("iter_test", "iter_ap"),
+    #("iter_test_2", "iter_ap_reduced")
 ]
 ATTRIBUTES = [
     "error",
