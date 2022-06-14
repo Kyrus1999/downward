@@ -60,9 +60,6 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
         prop->cost = 0;
         prop->reached_by = nullptr;
         queue.push(0, prop);
-        string s1 = to_string(0);
-        string s2 = to_string(prop->prop_id);
-        printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str(), "Cost", to_string(0).c_str() );
     }
 }
 
@@ -72,7 +69,6 @@ void AdditiveHeuristic::relaxed_exploration() {
         pair<int, PropositionNode*> top_pair = queue.pop();
         int distance = top_pair.first;
         PropositionNode *prop = top_pair.second;
-        printf("%5s: %7s\n", "PropID", to_string(prop->prop_id).c_str());
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
