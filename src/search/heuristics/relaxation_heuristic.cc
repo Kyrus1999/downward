@@ -28,9 +28,6 @@ void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecess
     auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
     assert(op_predecessor->cost >= 0);
     int newcost = op_predecessor->cost + op_predecessor->base_cost;
-    string s1 = to_string(op_predecessor->operator_no);
-    string s2 = to_string(this->prop_id);
-    printf("%5s: %7s; %5s: %7s; %5s: %7s\n", "OpID", s1.c_str() , "PropID", s2.c_str(), "Cost", to_string(newcost).c_str() );
     if (cost == -1 || cost > newcost) {
         cost = newcost;
         reached_by = op_predecessor;
@@ -173,6 +170,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         }
 
     }
+    sort_vector_by_propid(operator_node->precondition_of);
     for (OperatorNode* t : temp) {
         operator_node->precondition_of.push_back(t);
     }
@@ -194,6 +192,24 @@ void RelaxationHeuristic::sort_vector_by_propid(std::vector<PropositionNode*> &v
     }
     vector.swap(temp);
 }
+
+    void RelaxationHeuristic::sort_vector_by_propid(std::vector<GraphNode*> &vector) {
+        std::vector<PropID> id_vector;
+        id_vector.reserve(vector.size());
+        for (GraphNode *tp : vector) {
+            auto *p = static_cast<PropositionNode*>(tp);
+            id_vector.push_back(p->prop_id);
+        }
+        std::vector<PropID> sorted_id_vector(id_vector);
+        utils::sort_unique(sorted_id_vector);
+        std::vector<GraphNode*> temp;
+        for (PropID prop_id : sorted_id_vector) {
+            auto iter = std::find(id_vector.begin(), id_vector.end(), prop_id);
+            assert(iter != id_vector.end());
+            temp.push_back(vector[iter - id_vector.begin()]);
+        }
+        vector.swap(temp);
+    }
 
 bool RelaxationHeuristic::is_sorted_by_propid(std::vector<PropositionNode *> &vector) {
     std::vector<PropID> id_vector;
@@ -277,7 +293,7 @@ void RelaxationHeuristic::simplify() {
                 // We already had an element with this key; check its cost.
                 Map::iterator iter = inserted.first;
                 Value old_value = iter->second;
-                if (value < old_value)
+                if (value.first < old_value.first)
                     iter->second = value;
             }
         }
@@ -304,6 +320,25 @@ void RelaxationHeuristic::simplify() {
         */
 
         int cost = op->base_cost;
+
+        if (op->operator_no == 7168) {
+            cout << "starting 288 in 7168 " << i << endl;
+            cout << static_cast<OperatorNode*>(unary_operator_index[make_pair(op->preconditions,
+                                                                              get_proposition(288))].second)->operator_no << endl;
+        }
+        if (op->operator_no ==4160) {
+            cout << "starting 288 in 4160 " << i << endl;
+            cout << static_cast<OperatorNode*>(unary_operator_index[make_pair(op->preconditions,
+                                                                              get_proposition(288))].second)->operator_no << endl;
+        }
+
+/*        if (op->operator_no == 4160) {
+            cout << "got 4160" << endl;
+            for (auto *t : op->precondition_of) {
+                auto *te = static_cast<PropositionNode*>(t);
+                cout << te->prop_id << endl;
+            }
+        }*/
         //const vector<PropositionNode *> precondition = op->preconditions;
 
         /*
@@ -316,7 +351,10 @@ void RelaxationHeuristic::simplify() {
           enough to test here whether looking up the key of op in the
           map results in an entry including op itself.
         */
+
         for (GraphNode *effect : op->precondition_of) {
+            auto *t = static_cast<PropositionNode*>(effect);
+
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
                 for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
                     if (op->precondition_of[index] == effect) {
