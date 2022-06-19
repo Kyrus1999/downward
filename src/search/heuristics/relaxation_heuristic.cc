@@ -382,8 +382,8 @@ void RelaxationHeuristic::simplify() {
             continue;
         }
         vector<PropositionNode *> &dominating_precondition = dominating_key.first;
-        for (GraphNode *effect : op->precondition_of) {
-            dominating_key.second = effect;
+        for (auto iter = --op->precondition_of.end(); iter >= op->precondition_of.begin(); --iter) {
+            dominating_key.second = *iter;
 
             // We subtract "- 1" to generate all *strict* subsets of precondition.
             int powerset_size = (1 << op->preconditions.size()) - 1;
@@ -401,12 +401,7 @@ void RelaxationHeuristic::simplify() {
                         #ifndef NDEBUG
                             unsigned int size_before = op->precondition_of.size() ;
                         #endif
-                        for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
-                            if (op->precondition_of[index] == effect) {
-                                op->precondition_of.erase(op->precondition_of.begin() + index);
-                                break;
-                            }
-                        }
+                        op->precondition_of.erase(iter);
                         //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
                         assert(size_before != op->precondition_of.size() );
