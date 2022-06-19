@@ -321,16 +321,6 @@ void RelaxationHeuristic::simplify() {
 
         int cost = op->base_cost;
 
-        if (op->operator_no == 7168) {
-            cout << "starting 288 in 7168 " << i << endl;
-            cout << static_cast<OperatorNode*>(unary_operator_index[make_pair(op->preconditions,
-                                                                              get_proposition(288))].second)->operator_no << endl;
-        }
-        if (op->operator_no ==4160) {
-            cout << "starting 288 in 4160 " << i << endl;
-            cout << static_cast<OperatorNode*>(unary_operator_index[make_pair(op->preconditions,
-                                                                              get_proposition(288))].second)->operator_no << endl;
-        }
 
 /*        if (op->operator_no == 4160) {
             cout << "got 4160" << endl;
@@ -353,8 +343,6 @@ void RelaxationHeuristic::simplify() {
         */
 
         for (GraphNode *effect : op->precondition_of) {
-            auto *t = static_cast<PropositionNode*>(effect);
-
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
                 for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
                     if (op->precondition_of[index] == effect) {
