@@ -11,12 +11,6 @@ REPO = project.get_repo_base()
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS"]
 if project.REMOTE:
     SUITE = project.SUITE_SATISFICING
-    SUITE = ["caldera-sat18-adl",
-             "caldera-split-sat18-adl",
-             "citycar-sat14-adl",
-             "organic-synthesis-split-sat18-strips",
-             "parcprinter-sat11-strips",]
-
     ENV = project.BaselSlurmEnvironment(email="cyrill.imahorn@stud.unibas.ch")
 else:
     SUITE = ["depot:p01.pddl", "grid:prob01.pddl", "gripper:prob01.pddl",]
@@ -34,8 +28,8 @@ REVS = [
     #("version1", "version1"),
     ("version1-simplify", "version1-simplify"),
     #("patrick3", "iter"),
-    #("iter_test", "iter_ap"),
-    #("iter_test_2", "iter_ap_reduced")
+    ("iter_test", "iter_ap"),
+    ("iter_test_2", "iter_ap_reduced")
 ]
 ATTRIBUTES = [
     "error",
