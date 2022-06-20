@@ -11,23 +11,11 @@ REPO = project.get_repo_base()
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS"]
 if project.REMOTE:
     SUITE = project.SUITE_SATISFICING
-    SUITE = ["airport",
-             "barman-sat11-strips",
-             "barman-sat14-strips",
-             "caldera-sat18-adl",
+    SUITE = ["caldera-sat18-adl",
              "caldera-split-sat18-adl",
-             "childsnack-sat14-strips",
              "citycar-sat14-adl",
-             "hiking-sat14-strips",
-             "maintenance-sat14-adl",
-             "miconic-fulladl",
-             "organic-synthesis-sat18-strips",
              "organic-synthesis-split-sat18-strips",
-             "parcprinter-sat11-strips",
-             "trucks",
-             "trucks-strips",
-             "woodworking-sat08-strips",
-             "woodworking-sat11-strips",]
+             "parcprinter-sat11-strips",]
 
     ENV = project.BaselSlurmEnvironment(email="cyrill.imahorn@stud.unibas.ch")
 else:
