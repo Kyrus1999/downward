@@ -170,7 +170,6 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
         }
 
     }
-    sort_vector_by_propid(operator_node->precondition_of);
     for (OperatorNode* t : temp) {
         operator_node->precondition_of.push_back(t);
     }
@@ -342,17 +341,10 @@ void RelaxationHeuristic::simplify() {
           map results in an entry including op itself.
         */
 
-        for (GraphNode *effect : op->precondition_of) {
+        for (auto iter = --op->precondition_of.end(); iter >= op->precondition_of.begin(); --iter) {
+            auto effect= *iter;
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
-                for (unsigned long index = 0; index < op->precondition_of.size(); index++) {
-                    if (op->precondition_of[index] == effect) {
-                        op->precondition_of.erase(op->precondition_of.begin() + index);
-                        break;
-                    }
-                }
-                //std::remove(op->precondition_of.begin(), op->precondition_of.end(),
-                //            effect);
-
+                op->precondition_of.erase(iter);
                 counter_deleted_effects++;
             }
         }
@@ -398,6 +390,7 @@ void RelaxationHeuristic::simplify() {
                 }
             }
         }
+
         // a bit inefficient, since not all precondition propositions for a conditional node contains a link to the conditional node, but to its parent node.
         //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
         if (op->precondition_of.empty()) {
