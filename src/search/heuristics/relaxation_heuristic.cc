@@ -311,19 +311,6 @@ void RelaxationHeuristic::simplify() {
           test in `is_dominated`.
         */
 // This redundancy is pretty annoying
-        for (GraphNode *effect: op->precondition_of_op) {
-            Key key(op->preconditions, effect);
-            Value value(op->base_cost, op);
-            auto inserted = unary_operator_index.insert(
-                    make_pair(move(key), value));
-            if (!inserted.second) {
-                // We already had an element with this key; check its cost.
-                Map::iterator iter = inserted.first;
-                Value old_value = iter->second;
-                if (value < old_value)
-                    iter->second = value;
-            }
-        }
         for (GraphNode *effect: op->precondition_of_prop) {
             Key key(op->preconditions, effect);
             Value value(op->base_cost, op);
@@ -333,7 +320,7 @@ void RelaxationHeuristic::simplify() {
                 // We already had an element with this key; check its cost.
                 Map::iterator iter = inserted.first;
                 Value old_value = iter->second;
-                if (value < old_value)
+                if (value.first < old_value.first)
                     iter->second = value;
             }
         }
@@ -373,17 +360,17 @@ void RelaxationHeuristic::simplify() {
           enough to test here whether looking up the key of op in the
           map results in an entry including op itself.
         */
-        for (GraphNode *effect: op->precondition_of_op) {
-            if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
-                for (unsigned long index = 0; index < op->precondition_of_op.size(); index++) {
-                    if (op->precondition_of_op[index] == effect) {
-                        op->precondition_of_op.erase(op->precondition_of_op.begin() + index);
-                        break;
-                    }
+        if (!op->precondition_of_prop.empty()) {
+            for (auto iter = --op->precondition_of_prop.end();
+                 iter >= op->precondition_of_prop.begin(); --iter) {
+                auto effect = *iter;
+                if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
+                    op->precondition_of_prop.erase(iter);
+                    counter_deleted_effects++;
                 }
-                counter_deleted_effects++;
             }
         }
+        /*
         for (GraphNode *effect: op->precondition_of_prop) {
             if (op != unary_operator_index[make_pair(op->preconditions, effect)].second) {
                 for (unsigned long index = 0; index < op->precondition_of_prop.size(); index++) {
@@ -395,14 +382,15 @@ void RelaxationHeuristic::simplify() {
                 counter_deleted_effects++;
             }
         }
-        
+         */
+
         /*
           We now handle all cases where X is a strict subset of pre(op).
           Our map lookup ensures conditions 1. and 2., and because X is
           a strict subset, we also have 4a (which means we don't need 4b).
           So it only remains to check 3 for all hits.
         */
-        if (op->num_preconditions > MAX_PRECONDITIONS_TO_TEST) {
+        if (op->preconditions.size() > MAX_PRECONDITIONS_TO_TEST  && !op->precondition_of_prop.empty()) {
             /*
               The runtime of the following code grows exponentially
               with the number of preconditions_props.
@@ -411,8 +399,10 @@ void RelaxationHeuristic::simplify() {
         }
 
         vector<PropositionNode *> &dominating_precondition = dominating_key.first;
-        for (GraphNode *effect: op->precondition_of_op) {
-            dominating_key.second = effect;
+        if (!op->precondition_of_prop.empty()){
+        for (auto iter = --op->precondition_of_prop.end();
+             iter >= op->precondition_of_prop.begin(); --iter) {
+            dominating_key.second = *iter;
 
             // We subtract "- 1" to generate all *strict* subsets of precondition.
             int powerset_size = (1 << op->preconditions.size()) - 1;
@@ -430,19 +420,17 @@ void RelaxationHeuristic::simplify() {
 #ifndef NDEBUG
                         unsigned int size_before = op->precondition_of_op.size();
 #endif
-                        for (unsigned long index = 0; index < op->precondition_of_op.size(); index++) {
-                            if (op->precondition_of_op[index] == effect) {
-                                op->precondition_of_op.erase(op->precondition_of_op.begin() + index);
-                                break;
-                            }
-                        }
+                        op->precondition_of_prop.erase(iter);
                         //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                         counter_deleted_effects++;
                         assert(size_before == op->precondition_of_op.size());
+                        break;
                     }
+
                 }
             }
         }
+            /*
         for (GraphNode *effect: op->precondition_of_prop) {
             dominating_key.second = effect;
 
@@ -475,40 +463,45 @@ void RelaxationHeuristic::simplify() {
                 }
             }
         }
-        
-        // a bit inefficient, since not all precondition propositions_nodes for a conditional node contains a link to the conditional node, but to its parent node.
-        //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
-        if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
-            if (op->parent_node) {
-                for (unsigned long index = 0; index < op->parent_node->precondition_of_op.size(); index++) {
-                    if (op->parent_node->precondition_of_op[index] == op) {
-                        op->parent_node->precondition_of_op.erase(op->parent_node->precondition_of_op.begin() + index);
-                        break;
-                    }
-                    //std::remove(op->parent_node->precondition_of.begin(),
-                    //            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
-                }
-            }
-            for (PropositionNode *precond : op->preconditions) {
-                for (unsigned long index = 0; index < precond->precondition_of_op.size(); index++) {
-                    if (precond->precondition_of_op[index] == op) {
-                        precond->precondition_of_op.erase(precond->precondition_of_op.begin() + index);
-                        break;
+        */
+            // a bit inefficient, since not all precondition propositions_nodes for a conditional node contains a link to the conditional node, but to its parent node.
+            //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
+            if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
+                if (op->parent_node) {
+                    for (unsigned long index = 0;
+                         index < op->parent_node->precondition_of_op.size(); index++) {
+                        if (op->parent_node->precondition_of_op[index] == op) {
+                            op->parent_node->precondition_of_op.erase(
+                                    op->parent_node->precondition_of_op.begin() + index);
+                            break;
+                        }
+                        //std::remove(op->parent_node->precondition_of.begin(),
+                        //            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
                     }
                 }
+                for (PropositionNode *precond: op->preconditions) {
+                    for (unsigned long index = 0;
+                         index < precond->precondition_of_op.size(); index++) {
+                        if (precond->precondition_of_op[index] == op) {
+                            precond->precondition_of_op.erase(
+                                    precond->precondition_of_op.begin() + index);
+                            break;
+                        }
+                    }
 
-                //std::remove(precond->precondition_of.begin(),
-                //            precond->precondition_of.end(), static_cast<GraphNode*>(op));
-            }
-            for (unsigned long index = 0; index < operator_nodes.size(); index++) {
-                if (operator_nodes[index] == op) {
-                    operator_nodes.erase(operator_nodes.begin() + index);
-                    break;
+                    //std::remove(precond->precondition_of.begin(),
+                    //            precond->precondition_of.end(), static_cast<GraphNode*>(op));
                 }
+                for (unsigned long index = 0; index < operator_nodes.size(); index++) {
+                    if (operator_nodes[index] == op) {
+                        operator_nodes.erase(operator_nodes.begin() + index);
+                        break;
+                    }
+                }
+                //std::remove(operator_nodes.begin(), operator_nodes.end(), op);
+                delete op;
+                counter_deleted_nodes++;
             }
-            //std::remove(operator_nodes.begin(), operator_nodes.end(), op);
-            delete op;
-            counter_deleted_nodes++;
         }
     }
 
