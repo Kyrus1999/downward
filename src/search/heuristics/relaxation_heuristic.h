@@ -156,6 +156,12 @@ public:
     virtual bool dead_ends_are_reliable() const override;
 
     virtual ~RelaxationHeuristic();
+
+    void sort_vector_by_propid(std::vector<GraphNode *> &vector);
+
+    void sort_vector_by_propid(std::vector<PropositionNode *> &vector);
+
+    bool is_sorted_by_propid(std::vector<PropositionNode *> &vector);
 };
 }
 
