@@ -24,11 +24,11 @@ CONFIGS = [
 BUILD_OPTIONS = ["--debug"]
 DRIVER_OPTIONS = ["--overall-time-limit", "30m", "--debug"]
 REVS = [
-    ("main", "base"),
+    #("main", "base"),
     #("version1", "version1"),
-    ("version1-simplify", "version1-simplify"),
+    #("version1-simplify", "version1-simplify"),
     #("patrick3", "iter"),
-    ("iter_test", "iter_ap"),
+    #("iter_test", "iter_ap"),
     ("iter_test_2", "iter_ap_reduced")
 ]
 ATTRIBUTES = [
