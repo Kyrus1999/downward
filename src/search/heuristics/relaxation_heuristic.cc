@@ -499,6 +499,7 @@ void RelaxationHeuristic::simplify() {
         }
         */
         }
+        }
             // a bit inefficient, since not all precondition propositions_nodes for a conditional node contains a link to the conditional node, but to its parent node.
             //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
             if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
@@ -537,7 +538,7 @@ void RelaxationHeuristic::simplify() {
                 delete op;
                 counter_deleted_nodes++;
             }
-        }
+
     }
 
 
