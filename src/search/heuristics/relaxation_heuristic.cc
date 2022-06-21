@@ -457,7 +457,7 @@ void RelaxationHeuristic::simplify() {
                             op->precondition_of_prop.erase(iter);
                             //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
                             counter_deleted_effects++;
-                            assert(size_before == op->precondition_of_prop.size());
+                            assert(size_before != op->precondition_of_prop.size());
                             break;
                         }
 
