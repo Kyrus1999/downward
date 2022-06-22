@@ -22,7 +22,7 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
        below the signed 32-bit int upper bound.
      */
     static const int MAX_COST_VALUE = 100000000;
-    priority_queues::BucketQueue<Proposition*> queue;
+    priority_queues::AdaptiveQueue<Proposition*> queue;
     std::queue<Operator*> todo;
 
     bool did_write_overflow_warning;
@@ -30,18 +30,6 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     void setup_exploration_queue(const State &state);
     void relaxed_exploration();
     void mark_preferred_operators(const State &state, Proposition* goal);
-
-
-// TODO : add back in
-//    void increase_cost(int &cost, int amount) {
-//        assert(cost >= 0);
-//        assert(amount >= 0);
-//        cost += amount;
-//        if (cost > MAX_COST_VALUE) {
-//            write_overflow_warning();
-//            cost = MAX_COST_VALUE;
-//        }
-//    }
 
     void write_overflow_warning();
 protected:

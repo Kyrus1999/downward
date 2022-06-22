@@ -25,7 +25,7 @@ const PropID NO_PROP= -1;
 class RelaxationHeuristic;
 struct PropositionNode;
 
-using PropQueue = priority_queues::BucketQueue<PropositionNode*>;
+using PropQueue = priority_queues::AdaptiveQueue<PropositionNode*>;
 
 struct OperatorNode;
 struct PropositionNode;
@@ -38,7 +38,6 @@ struct GraphNode {
     explicit GraphNode();
     explicit GraphNode(std::vector<OperatorNode*> &&precondition_of_op, std::vector<PropositionNode*> &&precondition_of_prob);
     virtual ~GraphNode() = default;
-//    virtual void update_precondition(PropQueue &queue, GraphNode *predecessor)=0;
 };
 
 
@@ -52,10 +51,6 @@ struct OperatorNode : public GraphNode {
 
     explicit OperatorNode(int base_cost, int num_preconditions, int operator_no);
     virtual ~OperatorNode() = default;
-    //TODO: delete the copy constructor again
-
-//    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
-
     Operator* corresponding_op;
 };
 
@@ -71,13 +66,7 @@ struct PropositionNode: public GraphNode {
     Proposition* corresponding_prop;
     explicit PropositionNode(PropID prop_id);
     virtual ~PropositionNode() = default;
-    //TODO: delete the copy constructor again
-//    PropositionNode(const PropositionNode &) = delete;
-//    void update_precondition(PropQueue &queue, GraphNode *predecessor) override;
-//    void update_precondition(PropQueue &queue);
 };
-
-//static_assert(sizeof(GraphNode) == 28, "GraphNode has wrong size");
 
 struct Proposition {
     int cost; // Used for h^max cost or h^add cost;
@@ -135,19 +124,12 @@ protected:
       CEGAR hack in the additive heuristic and should eventually go
       away.
     */
-
-
     PropID get_prop_id(int var, int value) const;
     PropID get_prop_id(const FactProxy &fact) const;
 
     Proposition *get_proposition(PropID prop_id) {
         return propositions[prop_id];
     }
-
-    Operator *get_operator(OpID op_id) {
-        return operators[op_id];
-    }
-
 
     int get_proposition_cost(int var, int value) const;
 
@@ -156,12 +138,6 @@ public:
     virtual bool dead_ends_are_reliable() const override;
 
     virtual ~RelaxationHeuristic();
-
-    void sort_vector_by_propid(std::vector<GraphNode *> &vector);
-
-    void sort_vector_by_propid(std::vector<PropositionNode *> &vector);
-
-    bool is_sorted_by_propid(std::vector<PropositionNode *> &vector);
 };
 }
 

@@ -80,7 +80,6 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
         op->cost = 0;
         if (op->unsatisfied_preconditions == 0) {
             todo.push(op);
-//            op->update_precondition(queue, op);
         }
     }
     process_todo();
@@ -117,7 +116,6 @@ void AdditiveHeuristic::relaxed_exploration() {
             }
         }
         process_todo();
-//        prop->update_precondition(queue);
     }
 }
 

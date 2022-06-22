@@ -30,25 +30,6 @@ PropositionNode::PropositionNode(PropID prop_id)
       marked(false) {
 }
 
-//void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
-//    auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
-//    assert(prop_id != relaxation_heuristic::NO_PROP);
-//    assert(op_predecessor->cost >= 0);
-//    if (cost == -1 || cost > op_predecessor->cost) {
-//        cost = op_predecessor->cost;
-//        reached_by = op_predecessor;
-//        queue.push(cost, this);
-//    }
-//    assert(cost != -1 && cost <= op_predecessor->cost);
-//}
-//
-//void PropositionNode::update_precondition(PropQueue &queue) {
-//    for (auto node : precondition_of) {
-//        node->update_precondition(queue, this);
-//    }
-//}
-
-
 OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no)
     : GraphNode(),
       base_cost(base_cost),
@@ -56,18 +37,6 @@ OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no
       operator_no(operator_no),
       parent_node(nullptr) {
 }
-
-
-//void OperatorNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
-//    this->unsatisfied_preconditions--;
-//    assert(this->unsatisfied_preconditions >= 0);
-//    this->cost += predecessor->cost; // TODO: check for overflow
-//    if (this->unsatisfied_preconditions <= 0) {
-//        for (auto node : this->precondition_of) {
-//                node->update_precondition(queue, this);
-//            }
-//        }
-//    }
 
 Proposition::Proposition(PropositionNode *prop_node)
     : cost(-1),
@@ -88,7 +57,7 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     : Heuristic(opts) {
     // Build propositions_nodes.
     int num_propositions = task_properties::get_num_facts(task_proxy);
-//    propositions_nodes.reserve(num_propositions);
+    propositions_nodes.reserve(num_propositions);
     for (PropID prop_id = 0; prop_id < num_propositions; ++prop_id) {
         PropositionNode* prop_node = new PropositionNode(prop_id);
         propositions_nodes.push_back(prop_node);
@@ -123,6 +92,7 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
+
     // Generate all Propositions and bind them to corresponding node
     for (PropositionNode *prop_node : propositions_nodes) {
         auto *prop = new Proposition(prop_node);
@@ -136,7 +106,7 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
         op_node->corresponding_op = op;
     }
 
-    // Fill the pool with correct pointers
+    // Fill the array pool with correct pointers
     for (PropositionNode *prop_node : propositions_nodes) {
         auto *prop = prop_node->corresponding_prop;
         std::vector<Operator*> temp;
@@ -146,7 +116,6 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
         prop->precondition_of_op_index = op_precond_of_pool.append(temp);
         prop->precondition_of_op_size = temp.size();
     }
-
 
     for (OperatorNode *op_node : operator_nodes) {
         auto *op = op_node->corresponding_op;
@@ -201,9 +170,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     for (FactProxy precondition : preconditions) {
         precondition_props.push_back(propositions_nodes[get_prop_id(precondition)]);
     }
-
-    //utils::sort_unique(precondition_props); // Why?
-    sort_vector_by_propid(precondition_props);
+    utils::sort_unique(precondition_props);
 
     OperatorNode* operator_node = new OperatorNode(op.get_cost(),
                                                    precondition_props.size(),
@@ -238,8 +205,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             for (auto precondition: precondition_props) {
                 conditional_effect->preconditions.push_back(precondition);
             }
-            //utils::sort_unique(conditional_effect->preconditions);
-            sort_vector_by_propid(conditional_effect->preconditions);
+            utils::sort_unique(conditional_effect->preconditions);
             operator_node->precondition_of_op.push_back(conditional_effect);
             conditional_effect->precondition_of_prop.push_back(effect_prop);
         }
@@ -253,51 +219,6 @@ int RelaxationHeuristic::get_proposition_cost(int var, int value) const {
     const PropositionNode *node = propositions_nodes[prop_id];
     return node->cost;
 }
-
-    void RelaxationHeuristic::sort_vector_by_propid(std::vector<PropositionNode*> &vector) {
-        std::vector<PropID> id_vector;
-        id_vector.reserve(vector.size());
-        for (PropositionNode *p : vector) {
-            id_vector.push_back(p->prop_id);
-        }
-        std::vector<PropID> sorted_id_vector(id_vector);
-        utils::sort_unique(sorted_id_vector);
-        std::vector<PropositionNode*> temp;
-        for (PropID prop_id : sorted_id_vector) {
-            auto iter = std::find(id_vector.begin(), id_vector.end(), prop_id);
-            assert(iter != id_vector.end());
-            temp.push_back(vector[iter - id_vector.begin()]);
-        }
-        vector.swap(temp);
-    }
-
-    void RelaxationHeuristic::sort_vector_by_propid(std::vector<GraphNode*> &vector) {
-        std::vector<PropID> id_vector;
-        id_vector.reserve(vector.size());
-        for (GraphNode *tp : vector) {
-            auto *p = static_cast<PropositionNode*>(tp);
-            id_vector.push_back(p->prop_id);
-        }
-        std::vector<PropID> sorted_id_vector(id_vector);
-        utils::sort_unique(sorted_id_vector);
-        std::vector<GraphNode*> temp;
-        for (PropID prop_id : sorted_id_vector) {
-            auto iter = std::find(id_vector.begin(), id_vector.end(), prop_id);
-            assert(iter != id_vector.end());
-            temp.push_back(vector[iter - id_vector.begin()]);
-        }
-        vector.swap(temp);
-    }
-
-    bool RelaxationHeuristic::is_sorted_by_propid(std::vector<PropositionNode *> &vector) {
-        std::vector<PropID> id_vector;
-        id_vector.reserve(vector.size());
-        for (PropositionNode *p : vector) {
-            id_vector.push_back(p->prop_id);
-        }
-        return utils::is_sorted_unique(id_vector);
-    }
-
 
 void RelaxationHeuristic::simplify() {
     /*
@@ -320,7 +241,7 @@ void RelaxationHeuristic::simplify() {
     */
 #ifndef NDEBUG
     for (OperatorNode *op: operator_nodes)
-        assert(is_sorted_by_propid(op->preconditions));
+        assert(utils::is_sorted_unique(op->preconditions));
 #endif
 
     const int MAX_PRECONDITIONS_TO_TEST = 5;
@@ -356,7 +277,6 @@ void RelaxationHeuristic::simplify() {
           still filter out "exact matches" for these, i.e., the first
           test in `is_dominated`.
         */
-// This redundancy is pretty annoying
         for (GraphNode *effect: op->precondition_of_prop) {
             Key key(op->preconditions, effect);
             Value value(op->base_cost, op);
@@ -371,19 +291,11 @@ void RelaxationHeuristic::simplify() {
             }
         }
     }
-    /*
-      `dominating_key` is conceptually a local variable of `is_dominated`.
-      We declare it outside to reduce vector allocation overhead.
-    */
-    Key dominating_key;
-
 
     int counter_deleted_effects = 0;
     int counter_deleted_nodes = 0;
-    /*
-      is_dominated: test if a given operator is dominated by an
-      operator in the map.
-    */
+
+    Key dominating_key;
     for (int i = operator_nodes.size()-1; i >= 0; i--) {
         OperatorNode *op = operator_nodes.at(i);
         /*
@@ -393,14 +305,12 @@ void RelaxationHeuristic::simplify() {
         */
 
         int cost = op->base_cost;
-        //const vector<PropositionNode *> precondition = op->preconditions;
 
         /*
           We handle the case X = pre(op) specially for efficiency and
           to ensure that an operator is not considered to be dominated
           by itself.
 
-         //TODO: assert no empty operator_nodes anymore
           From the discussion above that operators with the same
           precondition and effect are actually totally ordered, it is
           enough to test here whether looking up the key of op in the
@@ -418,8 +328,6 @@ void RelaxationHeuristic::simplify() {
         }
 
 
-
-
         /*
           We now handle all cases where X is a strict subset of pre(op).
           Our map lookup ensures conditions 1. and 2., and because X is
@@ -429,118 +337,69 @@ void RelaxationHeuristic::simplify() {
         if (op->preconditions.size() <= MAX_PRECONDITIONS_TO_TEST) {
             /*
               The runtime of the following code grows exponentially
-              with the number of preconditions_props.
+              with the number of preconditions.
             */
+            vector<PropositionNode *> &dominating_precondition = dominating_key.first;
+            if (!op->precondition_of_prop.empty()) {
+                for (auto iter = --op->precondition_of_prop.end();
+                     iter >= op->precondition_of_prop.begin(); --iter) {
+                    dominating_key.second = *iter;
 
-        vector<PropositionNode *> &dominating_precondition = dominating_key.first;
-        if (!op->precondition_of_prop.empty()) {
-            for (auto iter = --op->precondition_of_prop.end();
-                 iter >= op->precondition_of_prop.begin(); --iter) {
-                dominating_key.second = *iter;
-
-                // We subtract "- 1" to generate all *strict* subsets of precondition.
-                int powerset_size = (1 << op->preconditions.size()) - 1;
-                for (int mask = 0; mask < powerset_size; ++mask) {
-                    dominating_precondition.clear();
-                    for (size_t i = 0; i < op->preconditions.size(); ++i)
-                        if (mask & (1 << i))
-                            dominating_precondition.push_back(op->preconditions[i]);
-                    Map::iterator found = unary_operator_index.find(dominating_key);
-                    if (found != unary_operator_index.end()) {
-                        Value dominator_value = found->second;
-                        int dominator_cost = dominator_value.first;
-                        if (dominator_cost <= cost) {
-                            //why is this not executed? (specially the remove part)
-#ifndef NDEBUG
-                            unsigned int size_before = op->precondition_of_prop.size();
-#endif
-                            op->precondition_of_prop.erase(iter);
-                            //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
-                            counter_deleted_effects++;
-                            assert(size_before != op->precondition_of_prop.size());
-                            break;
-                        }
-
-                    }
-                }
-            }
-            /*
-        for (GraphNode *effect: op->precondition_of_prop) {
-            dominating_key.second = effect;
-
-            // We subtract "- 1" to generate all *strict* subsets of precondition.
-            int powerset_size = (1 << op->preconditions.size()) - 1;
-            for (int mask = 0; mask < powerset_size; ++mask) {
-                dominating_precondition.clear();
-                for (size_t i = 0; i < op->preconditions.size(); ++i)
-                    if (mask & (1 << i))
-                        dominating_precondition.push_back(op->preconditions[i]);
-                Map::iterator found = unary_operator_index.find(dominating_key);
-                if (found != unary_operator_index.end()) {
-                    Value dominator_value = found->second;
-                    int dominator_cost = dominator_value.first;
-                    if (dominator_cost <= cost) {
-                        //why is this not executed? (specially the remove part)
-#ifndef NDEBUG
-                        unsigned int size_before = op->precondition_of_prop.size();
-#endif
-                        for (unsigned long index = 0; index < op->precondition_of_prop.size(); index++) {
-                            if (op->precondition_of_prop[index] == effect) {
-                                op->precondition_of_prop.erase(op->precondition_of_prop.begin() + index);
+                    // We subtract "- 1" to generate all *strict* subsets of precondition.
+                    int powerset_size = (1 << op->preconditions.size()) - 1;
+                    for (int mask = 0; mask < powerset_size; ++mask) {
+                        dominating_precondition.clear();
+                        for (size_t i = 0; i < op->preconditions.size(); ++i)
+                            if (mask & (1 << i))
+                                dominating_precondition.push_back(op->preconditions[i]);
+                        Map::iterator found = unary_operator_index.find(dominating_key);
+                        if (found != unary_operator_index.end()) {
+                            Value dominator_value = found->second;
+                            int dominator_cost = dominator_value.first;
+                            if (dominator_cost <= cost) {
+                                op->precondition_of_prop.erase(iter);
+                                counter_deleted_effects++;
                                 break;
                             }
                         }
-                        //std::remove(op->precondition_of.begin(), op->precondition_of.end(), effect);
-                        counter_deleted_effects++;
-                        assert(size_before == op->precondition_of_prop.size());
                     }
                 }
             }
         }
-        */
-        }
-        }
-            // a bit inefficient, since not all precondition propositions_nodes for a conditional node contains a link to the conditional node, but to its parent node.
-            //could be made more efficient, by making the preconditions vector only containing the direct preconditions and call the preconditions via a function which also includes indirect ones.
-            if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
-                if (op->parent_node) {
-                    for (unsigned long index = 0;
-                         index < op->parent_node->precondition_of_op.size(); index++) {
-                        if (op->parent_node->precondition_of_op[index] == op) {
-                            op->parent_node->precondition_of_op.erase(
-                                    op->parent_node->precondition_of_op.begin() + index);
-                            break;
-                        }
-                        //std::remove(op->parent_node->precondition_of.begin(),
-                        //            op->parent_node->precondition_of.end(), static_cast<GraphNode*>(op));
-                    }
-                }
-                for (PropositionNode *precond: op->preconditions) {
-                    for (unsigned long index = 0;
-                         index < precond->precondition_of_op.size(); index++) {
-                        if (precond->precondition_of_op[index] == op) {
-                            precond->precondition_of_op.erase(
-                                    precond->precondition_of_op.begin() + index);
-                            break;
-                        }
-                    }
-
-                    //std::remove(precond->precondition_of.begin(),
-                    //            precond->precondition_of.end(), static_cast<GraphNode*>(op));
-                }
-                for (unsigned long index = 0; index < operator_nodes.size(); index++) {
-                    if (operator_nodes[index] == op) {
-                        operator_nodes.erase(operator_nodes.begin() + index);
+        // deleting all references to operators with no effect.
+        if (op->precondition_of_op.empty() && op->precondition_of_prop.empty()) {
+            if (op->parent_node) {
+                for (unsigned long index = 0;
+                     index < op->parent_node->precondition_of_op.size(); index++) {
+                    if (op->parent_node->precondition_of_op[index] == op) {
+                        op->parent_node->precondition_of_op.erase(
+                                op->parent_node->precondition_of_op.begin() + index);
                         break;
                     }
                 }
-                //std::remove(operator_nodes.begin(), operator_nodes.end(), op);
-                delete op;
-                counter_deleted_nodes++;
             }
+            // this would be more efficient, if op->preconditions would not hold transitive preconditions.
+            for (PropositionNode *precond: op->preconditions) {
+                for (unsigned long index = 0;
+                     index < precond->precondition_of_op.size(); index++) {
+                    if (precond->precondition_of_op[index] == op) {
+                        precond->precondition_of_op.erase(
+                                precond->precondition_of_op.begin() + index);
+                        break;
+                    }
+                }
+            }
+            for (unsigned long index = 0; index < operator_nodes.size(); index++) {
+                if (operator_nodes[index] == op) {
+                    operator_nodes.erase(operator_nodes.begin() + index);
+                    break;
+                }
+            }
+            delete op;
+            counter_deleted_nodes++;
+        }
 
     }
-
 
     if (log.is_at_least_normal()) {
         log << " done! [" << operator_nodes.size() << " unary operators, Removed Nodes: " << counter_deleted_nodes << ", Removed Effects: " << counter_deleted_effects
@@ -571,7 +430,6 @@ void RelaxationHeuristic::simplify() {
     }
 #endif
 }
-
 
 RelaxationHeuristic::~RelaxationHeuristic() {
     for (auto ptr: operators) {
