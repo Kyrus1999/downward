@@ -29,18 +29,6 @@ class AdditiveHeuristic : public relaxation_heuristic::RelaxationHeuristic {
     void relaxed_exploration();
     void mark_preferred_operators(const State &state, PropositionNode* goal);
 
-
-// TODO : add back in
-//    void increase_cost(int &cost, int amount) {
-//        assert(cost >= 0);
-//        assert(amount >= 0);
-//        cost += amount;
-//        if (cost > MAX_COST_VALUE) {
-//            write_overflow_warning();
-//            cost = MAX_COST_VALUE;
-//        }
-//    }
-
     void write_overflow_warning();
 protected:
     virtual int compute_heuristic(const State &ancestor_state) override;
