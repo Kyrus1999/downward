@@ -443,6 +443,7 @@ void RelaxationHeuristic::simplify() {
             }
             for (auto *cond_eff : operator_node->precondition_of_op) {
                 cond_eff->parent_node = nullptr;
+                cond_eff->num_preconditions = cond_eff->preconditions.size();
             }
 
             operator_nodes.erase(std::find(operator_nodes.begin(), operator_nodes.end(), operator_node));

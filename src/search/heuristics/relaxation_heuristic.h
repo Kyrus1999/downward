@@ -43,7 +43,7 @@ struct GraphNode {
 
 struct OperatorNode : public GraphNode {
     const int base_cost;
-    const int num_preconditions;
+    int num_preconditions;
     int operator_no; // -1 for axioms; index into the task's operators otherwise
     int unsatisfied_preconditions;
     std::vector<PropositionNode*> preconditions;
