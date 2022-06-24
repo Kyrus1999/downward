@@ -429,6 +429,26 @@ void RelaxationHeuristic::simplify() {
             assert(pointer_set.find(child) != pointer_set.end());
     }
 #endif
+
+    // Delete all operators, which only have conditional effects.
+    for (auto *operator_node : operator_nodes) {
+        if (operator_node->precondition_of_prop.empty()) {
+            for (auto *precond : operator_node->preconditions) {
+                auto ref = std::find(precond->precondition_of_op.begin(), precond->precondition_of_op.end(), operator_node);
+                assert(ref != precond->precondition_of_op.end());
+                precond->precondition_of_op.erase(ref);
+                for (auto *cond_eff : operator_node->precondition_of_op) {
+                    precond->precondition_of_op.push_back(cond_eff);
+                }
+            }
+            for (auto *cond_eff : operator_node->precondition_of_op) {
+                cond_eff->parent_node = nullptr;
+            }
+
+            operator_nodes.erase(std::find(operator_nodes.begin(), operator_nodes.end(), operator_node));
+            delete operator_node;
+        }
+    }
 }
 
 RelaxationHeuristic::~RelaxationHeuristic() {

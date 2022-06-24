@@ -109,7 +109,6 @@ void AdditiveHeuristic::relaxed_exploration() {
         for (Operator* succ : op_precond_of_pool.get_slice(
                 prop->precondition_of_op_index, prop->precondition_of_op_size)) {
             succ->unsatisfied_preconditions--;
-            assert(succ->unsatisfied_preconditions >= 0);
             succ->cost += prop->cost;
             if (succ->unsatisfied_preconditions <= 0) {
                 todo.push(succ);
