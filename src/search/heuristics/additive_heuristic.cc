@@ -41,22 +41,22 @@ void AdditiveHeuristic::write_overflow_warning() {
 void AdditiveHeuristic::setup_exploration_queue(const State &state) {
     queue.clear();
 
-    for (auto &prop : propositions) {
+    for (auto prop : propositions) {
         prop->cost = -1;
         prop->marked = false;
     }
 
     // Deal with operators and axioms without preconditions_props.
-    for (auto &op : operator_nodes) {
+    for (auto &op : operators) {
         op->unsatisfied_preconditions = op->num_preconditions;
         op->cost = 0;
         if (op->unsatisfied_preconditions == 0) {
-            op->update_precondition(queue, op);
+            update_precondition(queue, op);
         }
     }
 
     for (FactProxy fact : state) {
-        PropositionNode* prop = propositions[get_prop_id(fact)];
+        Proposition* prop = propositions[get_prop_id(fact)];
         prop->cost = 0;
         prop->reached_by = nullptr;
         queue.push(0, prop);
@@ -66,9 +66,9 @@ void AdditiveHeuristic::setup_exploration_queue(const State &state) {
 void AdditiveHeuristic::relaxed_exploration() {
     int unsolved_goals = goal_propositions.size();
     while (!queue.empty()) {
-        pair<int, PropositionNode*> top_pair = queue.pop();
+        pair<int, Proposition*> top_pair = queue.pop();
         int distance = top_pair.first;
-        PropositionNode *prop = top_pair.second;
+        Proposition *prop = top_pair.second;
         int prop_cost = prop->cost;
         assert(prop_cost >= 0);
         assert(prop_cost <= distance);
@@ -76,19 +76,18 @@ void AdditiveHeuristic::relaxed_exploration() {
             continue;
         if (prop->is_goal && --unsolved_goals == 0)
             return;
-        prop->update_precondition(queue);
+        update_precondition(queue, prop);
     }
 }
 
-
 void AdditiveHeuristic::mark_preferred_operators(
-    const State &state, PropositionNode* goal) {
+    const State &state, Proposition* goal) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
-        OperatorNode* op_id = goal->reached_by;
+        Operator* op_id = goal->reached_by;
         if (op_id != nullptr) { // We have not yet chained back to a start node.
             bool is_preferred = true;
-            for (auto *precond : op_id->preconditions) {
+            for (auto *precond : preconds_pool.get_slice(op_id->precondition_index, op_id->precondition_size)) {
                 mark_preferred_operators(state, precond);
                 if (precond->reached_by != nullptr) {
                     is_preferred = false;
@@ -111,7 +110,7 @@ int AdditiveHeuristic::compute_add_and_ff(const State &state) {
 
     int total_cost = 0;
     for (PropID goal_id : goal_propositions) {
-        const PropositionNode *goal = propositions[goal_id];
+        const Proposition *goal = propositions[goal_id];
         int goal_cost = goal->cost;
         if (goal_cost == -1)
             return DEAD_END;

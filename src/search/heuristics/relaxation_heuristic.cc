@@ -24,23 +24,44 @@ PropositionNode::PropositionNode(PropID prop_id)
       marked(false) {
 }
 
-void PropositionNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
-    auto *op_predecessor = static_cast<OperatorNode *>(predecessor);
-    assert(op_predecessor->cost >= 0);
-    int newcost = op_predecessor->cost + op_predecessor->base_cost;
-    if (cost == -1 || cost > newcost) {
-        cost = newcost;
-        reached_by = op_predecessor;
-        queue.push(cost, this);
+void RelaxationHeuristic::update_precondition(PropQueue &queue, Node *predecessor, Node* current) {
+    if (current->get_type() == 0) {
+        auto *op_predecessor = static_cast<Operator*>(predecessor);
+        auto *curr = static_cast<Proposition *>(current);
+        assert(op_predecessor->cost >= 0);
+        int newcost = op_predecessor->cost + op_predecessor->base_cost;
+        if (curr->cost == -1 || curr->cost > newcost) {
+            curr->cost = newcost;
+            curr->reached_by = op_predecessor;
+            queue.push(curr->cost, curr);
+        }
+        assert(curr->cost != -1 && curr->cost <= newcost);
+    } else if (current->get_type() == 1) {
+        auto *curr = static_cast<Operator*>(current);
+        curr->unsatisfied_preconditions--;
+        curr->cost += predecessor->cost; // TODO: check for overflow
+        if (curr->unsatisfied_preconditions <= 0) {
+            for (auto *node : precond_of_pool.get_slice(curr->precondition_of_index, curr->precondition_of_size)) {
+                update_precondition(queue, curr, node);
+            }
+        }
     }
-    assert(cost != -1 && cost <= newcost);
+
 }
 
-void PropositionNode::update_precondition(PropQueue &queue) {
-    for (auto node : precondition_of) {
-        node->update_precondition(queue, this);
+void RelaxationHeuristic::update_precondition(PropQueue &queue, Proposition* prop) {
+    for (auto node : precond_of_pool.get_slice(prop->precondition_of_index, prop->precondition_of_size)) {
+        update_precondition(queue, prop, node);
     }
 }
+
+    void RelaxationHeuristic::update_precondition(PropQueue &queue, Operator* op) {
+        if (op->unsatisfied_preconditions <= 0) {
+            for (auto *node : precond_of_pool.get_slice(op->precondition_of_index, op->precondition_of_size)) {
+                update_precondition(queue, op, node);
+            }
+        }
+    }
 
 
 OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no)
@@ -51,27 +72,31 @@ OperatorNode::OperatorNode(int base_cost, int num_preconditions, int operator_no
       parent_node(nullptr) {
 }
 
+    Node::Node(int cost)
+    : cost(cost){}
 
-void OperatorNode::update_precondition(PropQueue &queue, GraphNode *predecessor) {
-    this->unsatisfied_preconditions--;
-    this->cost += predecessor->cost; // TODO: check for overflow
-    if (this->unsatisfied_preconditions <= 0) {
-        for (auto node : this->precondition_of) {
-                node->update_precondition(queue, this);
-            }
-        }
-    }
+    Proposition::Proposition(PropositionNode *prop_node)
+            : Node(-1),
+              prop_id(prop_node->prop_id),
+              reached_by(nullptr),
+              is_goal(false),
+              marked(false) {}
 
+    Operator::Operator(OperatorNode *op_node)
+            : Node(-1),
+              base_cost(op_node->base_cost),
+              num_preconditions(op_node->num_preconditions),
+              operator_no(op_node->operator_no) {}
 
 // construction and destruction
 RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     : Heuristic(opts) {
     // Build propositions.
     int num_propositions = task_properties::get_num_facts(task_proxy);
-    propositions.reserve(num_propositions);
+    propositions_nodes.reserve(num_propositions);
     for (PropID prop_id = 0; prop_id < num_propositions; ++prop_id) {
         PropositionNode* prop_node = new PropositionNode(prop_id);
-        propositions.push_back(prop_node);
+        propositions_nodes.push_back(prop_node);
     }
 
     // Build proposition offsets.
@@ -82,14 +107,14 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
         proposition_offsets.push_back(offset);
         offset += var.get_domain_size();
     }
-    assert(offset == static_cast<int>(propositions.size()));
+    assert(offset == static_cast<int>(propositions_nodes.size()));
 
     // Build goal propositions.
     GoalsProxy goals = task_proxy.get_goals();
     goal_propositions.reserve(goals.size());
     for (FactProxy goal : goals) {
         PropID prop_id = get_prop_id(goal);
-        propositions[prop_id]->is_goal = true;
+        propositions_nodes[prop_id]->is_goal = true;
         goal_propositions.push_back(prop_id);
     }
     for (OperatorProxy op : task_proxy.get_operators())
@@ -103,6 +128,57 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
+
+
+        // Generate all Propositions and bind them to corresponding node
+        for (PropositionNode *prop_node : propositions_nodes) {
+            auto *prop = new Proposition(prop_node);
+            propositions.push_back(prop);
+            prop_node->corresponding_node = prop;
+        }
+        // Generate all Operators and bind them to corresponding node
+        for (OperatorNode *op_node : operator_nodes) {
+            auto *op = new Operator(op_node);
+            operators.push_back(op);
+            op_node->corresponding_node = op;
+        }
+
+        // Fill the array pool with correct pointers
+        for (PropositionNode *prop_node : propositions_nodes) {
+            auto *prop = prop_node->corresponding_node;
+            std::vector<Node*> temp;
+            for (auto *ptr : prop_node->precondition_of) {
+                temp.push_back(ptr->corresponding_node);
+            }
+            prop->precondition_of_index = precond_of_pool.append(temp);
+            prop->precondition_of_size = temp.size();
+        }
+
+        for (OperatorNode *op_node : operator_nodes) {
+            auto *op = static_cast<Operator*>(op_node->corresponding_node);
+            std::vector<Node*> temp;
+            for (auto *ptr : op_node->precondition_of) {
+                temp.push_back(ptr->corresponding_node);
+            }
+            op->precondition_of_index = precond_of_pool.append(temp);
+            op->precondition_of_size = temp.size();
+
+            std::vector<Proposition*> temp3;
+            for (auto *ptr : op_node->preconditions) {
+                temp3.push_back(static_cast<Proposition*>(ptr->corresponding_node));
+            }
+            op->precondition_index = preconds_pool.append(temp3);
+            op->precondition_size = temp3.size();
+        }
+
+        // Delete all nodes
+        for (auto ptr: operator_nodes) {
+            delete ptr;
+        }
+        for (auto ptr: propositions_nodes) {
+            delete ptr;
+        }
+
 }
 
 bool RelaxationHeuristic::dead_ends_are_reliable() const {
@@ -123,7 +199,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     vector<PropositionNode*> precondition_props;
     precondition_props.reserve(preconditions.size());
     for (FactProxy precondition : preconditions) {
-        precondition_props.push_back(propositions[get_prop_id(precondition)]);
+        precondition_props.push_back(propositions_nodes[get_prop_id(precondition)]);
     }
     utils::sort_unique(precondition_props);
 
@@ -137,7 +213,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
     }
 
     for (EffectProxy effect : op.get_effects()) {
-        PropositionNode* effect_prop = propositions[get_prop_id(effect.get_fact())];
+        PropositionNode* effect_prop = propositions_nodes[get_prop_id(effect.get_fact())];
         EffectConditionsProxy eff_conds = effect.get_conditions();
 
         if (eff_conds.empty()) {
@@ -146,7 +222,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
             vector<PropositionNode*> effect_conditions;
             effect_conditions.reserve(eff_conds.size());
             for (FactProxy eff_cond : eff_conds) {
-                effect_conditions.push_back(propositions[get_prop_id(eff_cond)]);
+                effect_conditions.push_back(propositions_nodes[get_prop_id(eff_cond)]);
             }
             OperatorNode* conditional_effect = new OperatorNode(op.get_cost(),
                                                                 effect_conditions.size() + 1,
@@ -172,7 +248,7 @@ void RelaxationHeuristic::build_unary_operators(const OperatorProxy &op) {
 
 int RelaxationHeuristic::get_proposition_cost(int var, int value) const {
     PropID prop_id = get_prop_id(var, value);
-    const PropositionNode *node = propositions[prop_id];
+    const PropositionNode *node = propositions_nodes[prop_id];
     return node->cost;
 }
 
@@ -365,11 +441,11 @@ void RelaxationHeuristic::simplify() {
     std::unordered_set<GraphNode*> pointer_set;
     for (OperatorNode *op: operator_nodes)
         pointer_set.insert(op);
-    for (PropositionNode *prop : propositions)
+    for (PropositionNode *prop : propositions_nodes)
         for (GraphNode *child : prop->precondition_of)
             assert(pointer_set.find(child) != pointer_set.end());
 
-    for (PropositionNode *prop : propositions)
+    for (PropositionNode *prop : propositions_nodes)
         pointer_set.insert(prop);
     for (OperatorNode *op : operator_nodes)
         for (GraphNode *child : op->precondition_of)
@@ -379,7 +455,7 @@ void RelaxationHeuristic::simplify() {
 
 
 RelaxationHeuristic::~RelaxationHeuristic() {
-    for (auto ptr: operator_nodes) {
+    for (auto ptr: operators) {
         delete ptr;
     }
     for (auto ptr: propositions) {
