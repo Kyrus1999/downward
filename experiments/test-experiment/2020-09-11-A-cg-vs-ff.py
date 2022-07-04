@@ -27,9 +27,9 @@ REVS = [
     ("main", "base"),
     #("version1", "version1"),
     ("version1-simplify", "version1-simplify"),
-    #("patrick3", "iter"),
-    #("iter_test", "iter_ap"),
-    ("iter_test_2", "iter-reduced")
+    ("patrick3", "iter"),
+    ("iter_test", "iter_ap"),
+    ("iter_test_2", "iter-reduced"),
     ("version1-reduced", "recursive-reduced")
 ]
 ATTRIBUTES = [
