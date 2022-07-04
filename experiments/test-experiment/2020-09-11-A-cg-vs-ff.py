@@ -17,19 +17,20 @@ else:
     ENV = project.LocalEnvironment(processes=6)
 
 CONFIGS = [
-    #("add", ["--search", f"eager_greedy([add()])"]),
+    ("add", ["--search", f"eager_greedy([add()])"]),
     ("ff", ["--search", f"eager_greedy([ff()])"]),
 ]
 
 BUILD_OPTIONS = ["--debug"]
 DRIVER_OPTIONS = ["--overall-time-limit", "30m", "--debug"]
 REVS = [
-    #("main", "base"),
+    ("main", "base"),
     #("version1", "version1"),
-    #("version1-simplify", "version1-simplify"),
+    ("version1-simplify", "version1-simplify"),
     #("patrick3", "iter"),
     #("iter_test", "iter_ap"),
-    ("iter_test_2", "iter_ap_reduced")
+    ("iter_test_2", "iter-reduced")
+    ("version1-reduced", "recursive-reduced")
 ]
 ATTRIBUTES = [
     "error",
@@ -89,40 +90,40 @@ project.add_absolute_report(
 #             name=f"{exp.name}-{algo1}-vs-{algo2}-{attr}{suffix}",
 #         )
 
-class TranslatorDiffReport(rep.PlanningReport):
-    def get_cell(self, run):
-        return ";".join(run.get(attr) for attr in self.attributes)
-
-    def get_text(self):
-        lines = []
-        for runs in self.problem_runs.values():
-            #lhashes = [r.get("translator_output_sas_hash") for r in runs]
-            #hashes = set(lhashes)
-            h_inits = [r.get("initial_h_value") for r in runs]
-            found = False
-            reason = ""
-            for i in range(0, len(h_inits), 1):
-                if h_inits[i] != h_inits[0]:
-                    found = True
-                    reason += str(i) + ", "
-
-            #for i in range(1, len(h_inits), 2):
-            #    if h_inits[i] != h_inits[1]:
-            #        found = True
-            #        reason += str(i) + ", "
-
-
-            # if None in hashes:
-            #     reason = f"{len([h for h in lhashes if h is None])} failed + "
-            # if len(hashes) > 1:
-            #     reason += f"{len([h for h in lhashes if h is not None])} differ"
-            # if len(reason):
-            #     lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
-            if found:
-                lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
-        return "\n".join(lines)
-
-
-
-exp.add_report(TranslatorDiffReport(attributes=["domain", "problem", "algorithm", "run_dir"]), outfile="different_output_sas.csv")
+# class TranslatorDiffReport(rep.PlanningReport):
+#     def get_cell(self, run):
+#         return ";".join(run.get(attr) for attr in self.attributes)
+#
+#     def get_text(self):
+#         lines = []
+#         for runs in self.problem_runs.values():
+#             #lhashes = [r.get("translator_output_sas_hash") for r in runs]
+#             #hashes = set(lhashes)
+#             h_inits = [r.get("initial_h_value") for r in runs]
+#             found = False
+#             reason = ""
+#             for i in range(0, len(h_inits), 1):
+#                 if h_inits[i] != h_inits[0]:
+#                     found = True
+#                     reason += str(i) + ", "
+#
+#             #for i in range(1, len(h_inits), 2):
+#             #    if h_inits[i] != h_inits[1]:
+#             #        found = True
+#             #        reason += str(i) + ", "
+#
+#
+#             # if None in hashes:
+#             #     reason = f"{len([h for h in lhashes if h is None])} failed + "
+#             # if len(hashes) > 1:
+#             #     reason += f"{len([h for h in lhashes if h is not None])} differ"
+#             # if len(reason):
+#             #     lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
+#             if found:
+#                 lines.append(reason + ";" + ";".join([self.get_cell(r) for r in runs]))
+#         return "\n".join(lines)
+#
+#
+#
+# exp.add_report(TranslatorDiffReport(attributes=["domain", "problem", "algorithm", "run_dir"]), outfile="different_output_sas.csv")
 exp.run_steps()
