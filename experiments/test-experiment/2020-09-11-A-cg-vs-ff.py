@@ -23,8 +23,11 @@ BUILD_OPTIONS = []
 DRIVER_OPTIONS = ["--overall-time-limit", "30m"]
 REVS = [
     ("main", "base"),
-    ("version1", "version1"),
-    ("version1-simplify", "version1-simplify"),
+    ("version1-simplify", "recursive"),
+    ("version1-reduced", "recursive-reduced"),
+    ("iter_test_2", "iter_reduced"),
+    ("iter_2_shortened", "iter_wo_Simplify")
+
 ]
 ATTRIBUTES = [
     "error",
