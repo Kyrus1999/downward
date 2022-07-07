@@ -88,7 +88,7 @@ RelaxationHeuristic::RelaxationHeuristic(const options::Options &opts)
 
     // Simplify unary operators.
     utils::Timer simplify_timer;
-    simplify();
+    //simplify();
     if (log.is_at_least_normal()) {
         log << "time to simplify: " << simplify_timer << endl;
     }
